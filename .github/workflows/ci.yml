@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: apps/desktop/package-lock.json
+
+    - name: Install dependencies
+      working-directory: apps/desktop
+      run: npm ci
+
+    - name: Run TypeScript check
+      working-directory: apps/desktop
+      run: npx tsc --noEmit
+
+    - name: Run ESLint
+      working-directory: apps/desktop
+      run: npm run lint
+
+    - name: Run Vite build
+      working-directory: apps/desktop
+      run: npm run build
