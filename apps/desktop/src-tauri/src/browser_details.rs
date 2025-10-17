@@ -3,6 +3,14 @@ use std::{fs, path::PathBuf, io::{self, Read}};
 use dirs::{config_dir, data_local_dir};
 use serde_json::Value;
 
+pub enum Browsers {
+    Chrome,
+    Edge,
+    Brave,
+    FireFox,
+    Safari
+}
+
 pub fn get_browsers() -> Vec<String> {
     let browser_vector = browser::get_all_existing_browsers();
     let browser_names: Vec<String> = browser_vector.iter().map(|s| s.name.to_owned()).collect();
@@ -10,7 +18,7 @@ pub fn get_browsers() -> Vec<String> {
     return browser_names;
 }
 
-pub fn get_chrome_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn get_chrome_based_profiles(os_paths: Vec<&str>) -> Result<Vec<String>, Box<dyn std::error::Error>> {
 
     let base_dir = if cfg!(target_os = "windows") || cfg!(target_os = "macos") {
             data_local_dir()
@@ -21,13 +29,13 @@ pub fn get_chrome_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>> 
     if let Some(mut path) = base_dir {
 
         #[cfg(target_os = "windows")]
-        path.push("Google\\Chrome\\User Data\\Local State"); 
+        path.push(os_paths[0]); 
         
         #[cfg(target_os = "macos")]
-        path.push("Google/Chrome/Local State");
+        path.push(os_paths[1]);
 
         #[cfg(target_os = "linux")]
-        path.push("google-chrome/Local State");
+        path.push(os_paths[2]);
 
         if path.exists() {
 
@@ -59,4 +67,28 @@ pub fn get_chrome_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>> 
     }
 
     Ok(Vec::new())
-}    
+}
+
+pub fn get_chrome_profiles(kind: Browsers) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    
+    let paths: Vec<&str> = match kind {
+        Browsers::Chrome => vec![
+            "Google\\Chrome\\User Data\\Local State",
+            "Google/Chrome/Local State",
+            "google-chrome/Local State",
+        ],
+        Browsers::Edge => vec![
+            "Microsoft\\Edge\\User Data\\Local State", 
+            "Microsoft/Edge/Local State",
+            "microsoft-edge/Local State",
+        ],
+        Browsers::Brave => vec![
+            "BraveSoftware\\Brave-Browser\\User Data\\Local State",
+            "BraveSoftware/Brave-Browser/Local State",
+            "brave/Local State",
+        ],
+        _ => Vec::new(),
+    };
+
+    return get_chrome_based_profiles(paths);
+}
