@@ -23,6 +23,7 @@
 - [About](#about)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
+- [Documentation](#documentation)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
@@ -82,6 +83,25 @@ open-with-browser/
 ├─ LICENSE (MIT)
 └─ CODE_OF_CONDUCT.md
 ```
+
+---
+
+## Documentation
+
+Comprehensive guides for developers and users:
+
+- **[Documentation Hub](docs/README.md)** - Overview of all available documentation
+- **[Windows Browser Profiles](docs/windows-browser-profiles.md)** - Complete guide to browser profile paths on Windows
+
+### Quick Reference: Supported Browsers
+| Browser | Windows | macOS | Linux | Profile Support |
+|---------|---------|--------|-------|-----------------|
+| Google Chrome | Documented | Planned | Planned | Documented |
+| Microsoft Edge | Documented | Planned | Planned | Documented |
+| Brave Browser | Documented | Planned | Planned | Documented |
+| Mozilla Firefox | Documented | Planned | Planned | Documented |
+
+**Legend**: Documented | Planned | Not supported
 
 ---
 
