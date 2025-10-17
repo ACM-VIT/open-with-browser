@@ -1,5 +1,14 @@
 module.exports = {
-  env: { browser: true, es2020: true },
+  languageOptions: {
+    globals: {
+      window: 'readonly',
+      document: 'readonly',
+      console: 'readonly',
+      process: 'readonly',
+    },
+    ecmaVersion: 2020,
+    sourceType: 'module',
+  },
   extends: [
     'eslint:recommended',
     '@typescript-eslint/recommended',
