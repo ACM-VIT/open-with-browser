@@ -49,7 +49,7 @@ pub fn get_chrome_based_profiles(os_paths: Vec<&str>) -> Result<Vec<String>, Box
                 .get("profile")
                 .and_then(|p| p.get("info_cache"))
                 .and_then(|ic| ic.as_object())
-                .ok_or_else(|| "Could not find 'profile' or 'info_cache' in JSON.")?;
+                .ok_or_else(|| {Box::new(io::Error::new(io::ErrorKind::InvalidData, "Could not find 'profile' or 'info_cache' in JSON.")) as Box<dyn std::error::Error>})?;
 
             let mut profile_names: Vec<String> = Vec::new();
 
