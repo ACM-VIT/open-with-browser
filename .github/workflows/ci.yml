@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,6 +14,22 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install Linux system dependencies (Tauri)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libglib2.0-dev \
+          libgtk-3-dev \
+          libwebkit2gtk-4.1-dev \
+          librsvg2-dev \
+          patchelf \
+          libasound2-dev \
+          libx11-dev \
+          libxdo-dev \
+          pkg-config \
+          libssl-dev \
+          libayatana-appindicator3-dev
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@v1
