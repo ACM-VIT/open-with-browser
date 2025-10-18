@@ -87,7 +87,7 @@ pub fn get_chrome_profiles(kind: Browsers) -> Result<Vec<String>, Box<dyn std::e
             "BraveSoftware/Brave-Browser/Local State",
             "brave/Local State",
         ],
-        _ => Vec::new(),
+        _ => return Ok(Vec::new()),
     };
 
     return get_chrome_based_profiles(paths);
