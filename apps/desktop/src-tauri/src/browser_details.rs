@@ -98,7 +98,7 @@ pub fn get_firefox_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>>
     let base_dir = if cfg!(target_os = "windows") || cfg!(target_os = "macos") {
             data_local_dir()
         } else {
-            config_dir()
+            dirs::home_dir()
     };
 
     if let Some(mut path) = base_dir {
