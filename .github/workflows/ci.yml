@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Install dependencies
+      working-directory: apps/desktop
+      run: bun install
+
+    - name: Run TypeScript check
+      working-directory: apps/desktop
+      run: bun run tsc --noEmit
+
+    - name: Run ESLint
+      working-directory: apps/desktop
+      run: bun run lint
+
+    - name: Run Vite build
+      working-directory: apps/desktop
+      run: bun run build
+
+    - name: Run Tauri build
+      working-directory: apps/desktop
+      run: bun run tauri build
