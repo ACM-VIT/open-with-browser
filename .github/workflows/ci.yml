@@ -14,25 +14,32 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
       with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: apps/desktop/package-lock.json
+        bun-version: latest
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
 
     - name: Install dependencies
       working-directory: apps/desktop
-      run: npm ci
+      run: bun install
 
     - name: Run TypeScript check
       working-directory: apps/desktop
-      run: npx tsc --noEmit
+      run: bun run tsc --noEmit
 
     - name: Run ESLint
       working-directory: apps/desktop
-      run: npm run lint
+      run: bun run lint
 
     - name: Run Vite build
       working-directory: apps/desktop
-      run: npm run build
+      run: bun run build
+
+    - name: Run Tauri build
+      working-directory: apps/desktop
+      run: bun run tauri build
