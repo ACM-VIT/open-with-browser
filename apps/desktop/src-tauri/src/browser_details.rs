@@ -107,10 +107,10 @@ pub fn get_firefox_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>>
         path.push("Mozilla\\Firefox\\Profiles"); 
         
         #[cfg(target_os = "macos")]
-        path.push("Mozilla/Firefox/Profiles");
+        path.push("Firefox/Profiles");
 
         #[cfg(target_os = "linux")]
-        path.push("mozilla-firefox/");
+        path.push("~/.mozilla/firefox");
 
         if path.exists() {
             match fs::read_dir(path) {
