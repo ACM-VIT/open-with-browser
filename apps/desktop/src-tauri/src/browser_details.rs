@@ -92,3 +92,50 @@ pub fn get_chrome_profiles(kind: Browsers) -> Result<Vec<String>, Box<dyn std::e
 
     return get_chrome_based_profiles(paths);
 }
+
+pub fn get_firefox_profiles() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+
+    let base_dir = if cfg!(target_os = "windows") || cfg!(target_os = "macos") {
+            data_local_dir()
+        } else {
+            config_dir()
+    };
+
+    if let Some(mut path) = base_dir {
+
+        #[cfg(target_os = "windows")]
+        path.push("Mozilla\\Firefox\\Profiles"); 
+        
+        #[cfg(target_os = "macos")]
+        path.push("Mozilla/Firefox/Profiles");
+
+        #[cfg(target_os = "linux")]
+        path.push("mozilla-firefox/");
+
+        if path.exists() {
+            match fs::read_dir(path) {
+                Ok(entries) => {
+                    let profile_names: Vec<String> = entries
+                        .filter_map(Result::ok)
+                        .filter_map(|entry| {
+                            match entry.file_type() {
+                                Ok(file_type) if file_type.is_dir() => {
+                                    Some(entry.file_name().to_string_lossy().into_owned())
+                                }
+                                _ => None, 
+                            }
+                        })
+                        .collect();
+                    return Ok(profile_names);
+                }
+                Err(e) => {
+                    eprintln!("Error reading directory: {}", e);
+                    return Ok(Vec::new());
+                }
+            }
+        }
+    }
+
+    return Ok(Vec::new());
+
+}
