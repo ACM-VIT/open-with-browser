@@ -1,0 +1,43 @@
+import { create } from 'zustand'
+
+export type BrowserEntry = {
+  id: string
+  name: string
+  path?: string
+}
+
+export type ProfileEntry = {
+  id: string
+  name: string
+  browserId?: string
+}
+
+type UIState = {
+  isDialogOpen: boolean
+  selectedBrowserId: string | null
+  selectedProfileId: string | null
+
+  openDialog: () => void
+  closeDialog: () => void
+  toggleDialog: () => void
+  setSelectedBrowser: (id: string | null) => void
+  setSelectedProfile: (id: string | null) => void
+  resetSelection: () => void
+}
+
+export const useUIStore = create<UIState>(
+  (set: (partial: Partial<UIState> | ((state: UIState) => Partial<UIState>)) => void) => ({
+  isDialogOpen: false,
+  selectedBrowserId: null,
+  selectedProfileId: null,
+
+  openDialog: () => set({ isDialogOpen: true }),
+  closeDialog: () => set({ isDialogOpen: false }),
+  toggleDialog: () => set((s: UIState) => ({ isDialogOpen: !s.isDialogOpen })),
+
+  setSelectedBrowser: (id: string | null) => set({ selectedBrowserId: id }),
+  setSelectedProfile: (id: string | null) => set({ selectedProfileId: id }),
+
+  resetSelection: () => set({ selectedBrowserId: null, selectedProfileId: null }),
+  })
+)
