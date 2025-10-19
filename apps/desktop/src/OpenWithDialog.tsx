@@ -14,8 +14,15 @@ type Props = {
   onChoose: (browser: BrowserProfile, persist: 'just-once' | 'always') => void;
 };
 
-export default function OpenWithDialog({ open, onClose, browsers, onChoose }: Props) {
-  const [selected, setSelected] = useState<string | null>(browsers[0]?.id ?? null);
+export default function OpenWithDialog({
+  open,
+  onClose,
+  browsers,
+  onChoose,
+}: Props) {
+  const [selected, setSelected] = useState<string | null>(
+    browsers[0]?.id ?? null
+  );
 
   if (!open) return null;
 
@@ -25,39 +32,49 @@ export default function OpenWithDialog({ open, onClose, browsers, onChoose }: Pr
   };
 
   return (
-    <div className="owd-backdrop">
-      <div className="owd-dialog" role="dialog" aria-modal="true">
-        <button aria-label="Close" className="owd-close" onClick={onClose}>
+    <div className='owd-backdrop'>
+      <div className='owd-dialog' role='dialog' aria-modal='true'>
+        <button aria-label='Close' className='owd-close' onClick={onClose}>
           ×
         </button>
         <h2>Open with</h2>
         <p>Select a browser to open this link:</p>
 
-        <div className="owd-list">
+        <div className='owd-list'>
           {browsers.map(b => (
-            <label className={`owd-item ${selected === b.id ? 'selected' : ''}`} key={b.id}>
+            <label
+              className={`owd-item ${selected === b.id ? 'selected' : ''}`}
+              key={b.id}
+            >
               <input
-                type="radio"
-                name="owd-browser"
+                type='radio'
+                name='owd-browser'
                 value={b.id}
                 checked={selected === b.id}
                 onChange={() => setSelected(b.id)}
               />
-              <div className="owd-meta">
-                <div className="owd-icon">{b.icon ? <img src={b.icon} alt="" /> : '🌐'}</div>
-                <div className="owd-text">
-                  <div className="owd-name">{b.name}</div>
-                  {b.profile ? <div className="owd-profile">{b.profile}</div> : null}
+              <div className='owd-meta'>
+                <div className='owd-icon'>
+                  {b.icon ? <img src={b.icon} alt='' /> : '🌐'}
+                </div>
+                <div className='owd-text'>
+                  <div className='owd-name'>{b.name}</div>
+                  {b.profile ? (
+                    <div className='owd-profile'>{b.profile}</div>
+                  ) : null}
                 </div>
               </div>
             </label>
           ))}
         </div>
 
-        <div className="owd-actions centered">
-          <div className="owd-choose">
+        <div className='owd-actions centered'>
+          <div className='owd-choose'>
             <button onClick={() => handleChoose('just-once')}>Just once</button>
-            <button className="owd-primary" onClick={() => handleChoose('always')}>
+            <button
+              className='owd-primary'
+              onClick={() => handleChoose('always')}
+            >
               Always
             </button>
           </div>

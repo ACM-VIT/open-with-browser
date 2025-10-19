@@ -14,7 +14,7 @@ function App() {
   const mockBrowsers: BrowserProfile[] = [
     { id: 'chrome', name: 'Google Chrome', icon: '', profile: 'Personal' },
     { id: 'edge', name: 'Microsoft Edge', icon: '', profile: 'Work' },
-    { id: 'firefox', name: 'Firefox', icon: '', profile: null }
+    { id: 'firefox', name: 'Firefox', icon: '', profile: null },
   ];
 
   async function greet() {
@@ -24,7 +24,11 @@ function App() {
 
   function handleChoose(b: BrowserProfile, persist: 'just-once' | 'always') {
     setOpen(false);
-    setResult(`${b.name}${b.profile ? ` (${b.profile})` : ''} — ${persist === 'always' ? 'Always' : 'Just once'}`);
+    setResult(
+      `${b.name}${b.profile ? ` (${b.profile})` : ''} — ${
+        persist === 'always' ? 'Always' : 'Just once'
+      }`
+    );
   }
 
   return (
@@ -65,9 +69,14 @@ function App() {
         <button onClick={() => setOpen(true)}>Open With</button>
       </div>
 
-    {result ? <p style={{ marginTop: 12 }}>Last choice: {result}</p> : null}
+      {result ? <p style={{ marginTop: 12 }}>Last choice: {result}</p> : null}
 
-      <OpenWithDialog open={open} onClose={() => setOpen(false)} browsers={mockBrowsers} onChoose={handleChoose} />
+      <OpenWithDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        browsers={mockBrowsers}
+        onChoose={handleChoose}
+      />
     </main>
   );
 }
