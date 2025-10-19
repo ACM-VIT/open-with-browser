@@ -6,7 +6,11 @@ type LayoutProps = {
   onNavigate: (page: string) => void;
 };
 
-export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
+export default function Layout({
+  children,
+  currentPage,
+  onNavigate,
+}: LayoutProps) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'rules', label: 'Rules' },
@@ -14,14 +18,14 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
   ];
 
   return (
-    <div className="layout">
-      <nav className="nav">
-        <div className="nav-brand">
+    <div className='layout'>
+      <nav className='nav'>
+        <div className='nav-brand'>
           <h1>Open With Browser</h1>
         </div>
-        <ul className="nav-list">
-          {navItems.map((item) => (
-            <li key={item.id} className="nav-item">
+        <ul className='nav-list'>
+          {navItems.map(item => (
+            <li key={item.id} className='nav-item'>
               <button
                 className={`nav-link ${currentPage === item.id ? 'active' : ''}`}
                 onClick={() => onNavigate(item.id)}
@@ -32,9 +36,7 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
           ))}
         </ul>
       </nav>
-      <main className="main-content">
-        {children}
-      </main>
+      <main className='main-content'>{children}</main>
     </div>
   );
 }

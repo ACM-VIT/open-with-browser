@@ -28,14 +28,17 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
+    <div className='dashboard'>
       <h2>Dashboard</h2>
-      <p>Welcome to the Open With Browser application. Test the browser selection dialog below.</p>
+      <p>
+        Welcome to the Open With Browser application. Test the browser selection
+        dialog below.
+      </p>
 
-      <div className="dashboard-section">
+      <div className='dashboard-section'>
         <h3>Test Browser Selection</h3>
         <form
-          className="row"
+          className='row'
           onSubmit={e => {
             e.preventDefault();
             greet();
