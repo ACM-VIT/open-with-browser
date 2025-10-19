@@ -42,6 +42,9 @@ jobs:
         rustup component add --toolchain stable rustfmt clippy
         rustup default stable
 
+    - name: Install Tauri CLI
+      run: cargo install tauri-cli --locked
+
     - name: Install dependencies
       working-directory: apps/desktop
       run: bun install
@@ -60,4 +63,4 @@ jobs:
 
     - name: Run Tauri build
       working-directory: apps/desktop
-      run: bun run tauri build
+      run: cargo tauri build

@@ -120,6 +120,200 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
+
+  /* Layout dark mode */
+  .layout {
+    background-color: #2f2f2f;
+  }
+
+  .nav {
+    background-color: #1a1a1a;
+    border-bottom-color: #333;
+  }
+
+  .nav-brand h1 {
+    color: #f6f6f6;
+  }
+
+  .nav-link {
+    color: #9aa7b2;
+  }
+
+  .nav-link:hover {
+    background-color: #333;
+    color: #f6f6f6;
+  }
+
+  .nav-link.active {
+    background-color: #396cd8;
+    color: white;
+  }
+}
+
+/* Layout styles */
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f6f6f6;
+}
+
+/* Navigation styles */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-brand h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0f0f0f;
+}
+
+.nav-list {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 1rem;
+}
+
+.nav-item {
+  margin: 0;
+}
+
+.nav-link {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background-color: #f0f0f0;
+  color: #0f0f0f;
+}
+
+.nav-link.active {
+  background-color: #396cd8;
+  color: white;
+}
+
+.nav-link.active:hover {
+  background-color: #2c5aa0;
+}
+
+/* Main content area */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* Page styles */
+.dashboard,
+.rules,
+.settings {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.dashboard h2,
+.rules h2,
+.settings h2 {
+  margin-top: 0;
+  color: #0f0f0f;
+}
+
+.dashboard-section,
+.rules-section,
+.settings-section {
+  background: white;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-section h3,
+.rules-section h3,
+.settings-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  background: #f8f8f8;
+  border-radius: 6px;
+  border: 2px dashed #ddd;
+}
+
+.setting-item {
+  margin: 1rem 0;
+}
+
+.setting-item label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.setting-item select {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+}
+
+/* Dark mode support for pages */
+@media (prefers-color-scheme: dark) {
+  .dashboard h2,
+  .rules h2,
+  .settings h2 {
+    color: #f6f6f6;
+  }
+
+  .dashboard-section,
+  .rules-section,
+  .settings-section {
+    background: #1a1a1a;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .dashboard-section h3,
+  .rules-section h3,
+  .settings-section h3 {
+    color: #e0e0e0;
+  }
+
+  .placeholder {
+    background: #2a2a2a;
+    color: #9aa7b2;
+    border-color: #444;
+  }
+
+  .setting-item select {
+    background: #2a2a2a;
+    color: #f6f6f6;
+    border-color: #444;
+  }
 }
 
 /* Open With Dialog Styles */
