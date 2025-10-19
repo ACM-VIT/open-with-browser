@@ -95,9 +95,6 @@ export default function OpenWithDialog({
               Always
             </button>
           </div>
-          <div style={{ marginTop: 8 }}>
-            <button onClick={handleClose}>Cancel</button>
-          </div>
         </div>
       </div>
     </div>
