@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
@@ -21,20 +21,16 @@ export default function OpenWithDialog({
   browsers,
   onChoose,
 }: Props) {
-  const storeOpen = useUIStore((s) => s.isDialogOpen);
-  const storeSelected = useUIStore((s) => s.selectedBrowserId);
-  const setSelectedBrowser = useUIStore((s) => s.setSelectedBrowser);
-  const closeDialog = useUIStore((s) => s.closeDialog);
+  const storeOpen = useUIStore(s => s.isDialogOpen);
+  const storeSelected = useUIStore(s => s.selectedBrowserId);
+  const setSelectedBrowser = useUIStore(s => s.setSelectedBrowser);
+  const closeDialog = useUIStore(s => s.closeDialog);
 
   const open = openProp ?? storeOpen;
 
-  const [selected, setSelected] = useState<string | null>(browsers[0]?.id ?? null);
-
-  useEffect(() => {
-    if (open) {
-      setSelected(storeSelected ?? browsers[0]?.id ?? null);
-    }
-  }, [open, storeSelected, browsers]);
+  const [selected, setSelected] = useState<string | null>(
+    storeSelected ?? browsers[0]?.id ?? null
+  );
 
   if (!open) return null;
 
@@ -44,7 +40,7 @@ export default function OpenWithDialog({
   };
 
   const handleChoose = (persist: 'just-once' | 'always') => {
-    const b = browsers.find((b) => b.id === selected);
+    const b = browsers.find(b => b.id === selected);
     if (b) {
       setSelectedBrowser(b.id);
       onChoose(b, persist);
@@ -91,7 +87,10 @@ export default function OpenWithDialog({
         <div className='owd-actions centered'>
           <div className='owd-choose'>
             <button onClick={() => handleChoose('just-once')}>Just once</button>
-            <button className='owd-primary' onClick={() => handleChoose('always')}>
+            <button
+              className='owd-primary'
+              onClick={() => handleChoose('always')}
+            >
               Always
             </button>
           </div>
