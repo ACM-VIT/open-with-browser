@@ -1,14 +1,18 @@
-use crowser::{browser};
-use std::{fs, path::PathBuf, io::{self, Read}};
+use crowser::browser;
+use std::{
+    fs,
+    io::{self, Read},
+};
 use dirs::{config_dir, data_local_dir};
 use serde_json::Value;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Browsers {
     Chrome,
     Edge,
     Brave,
     FireFox,
-    Safari
+    Safari,
 }
 
 pub fn get_browsers() -> Vec<String> {
@@ -16,6 +20,23 @@ pub fn get_browsers() -> Vec<String> {
     let browser_names: Vec<String> = browser_vector.iter().map(|s| s.name.to_owned()).collect();
 
     return browser_names;
+}
+
+pub fn parse_browser_kind<S: AsRef<str>>(value: S) -> Option<Browsers> {
+    let normalized = value
+        .as_ref()
+        .trim()
+        .to_lowercase()
+        .replace([' ', '-'], "");
+
+    match normalized.as_str() {
+        "chrome" | "googlechrome" => Some(Browsers::Chrome),
+        "edge" | "microsoftedge" => Some(Browsers::Edge),
+        "brave" | "bravebrowser" => Some(Browsers::Brave),
+        "firefox" | "mozillafirefox" => Some(Browsers::FireFox),
+        "safari" => Some(Browsers::Safari),
+        _ => None,
+    }
 }
 
 pub fn get_chrome_based_profiles(os_paths: Vec<&str>) -> Result<Vec<String>, Box<dyn std::error::Error>> {
