@@ -1,10 +1,4 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
+/* Reset and base styles */
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
@@ -21,6 +15,16 @@
   -webkit-text-size-adjust: 100%;
 }
 
+/* Logo hover effects */
+.logo.vite:hover {
+  filter: drop-shadow(0 0 2em #747bff);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafb);
+}
+
+/* Layout helpers */
 .container {
   margin: 0;
   padding-top: 10vh;
@@ -60,6 +64,7 @@ h1 {
   text-align: center;
 }
 
+/* Form controls */
 input,
 button {
   border-radius: 8px;
@@ -81,6 +86,7 @@ button {
 button:hover {
   border-color: #396cd8;
 }
+
 button:active {
   border-color: #396cd8;
   background-color: #e8e8e8;
@@ -110,7 +116,145 @@ button {
     color: #ffffff;
     background-color: #0f0f0f98;
   }
+
   button:active {
     background-color: #0f0f0f69;
+  }
+}
+
+/* Open With Dialog Styles */
+.owd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.owd-dialog {
+  position: relative; 
+  background: var(--owd-bg, #fff);
+  padding: 28px 20px 20px 20px;
+  border-radius: 8px;
+  width: 420px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  color: inherit;
+}
+
+.owd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 16px 0;
+}
+
+.owd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.owd-item.selected {
+  background: #f0f6ff;
+  border-color: #cfe0ff;
+}
+
+.owd-item input {
+  display: none;
+}
+
+.owd-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.owd-icon img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+
+.owd-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  flex: 1;
+}
+
+.owd-name {
+  font-weight: 600;
+}
+
+.owd-profile {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.owd-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.owd-choose button {
+  margin-left: 8px;
+}
+
+.owd-primary {
+  background: #396cd8;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.owd-secondary {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+}
+
+.owd-close {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.owd-actions.centered {
+  justify-content: center;
+}
+
+.owd-actions.centered .owd-choose {
+  display: flex;
+  gap: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .owd-dialog {
+    --owd-bg: #1a1a1a;
+  }
+
+  .owd-item.selected {
+    background: #0f2a3a;
+    border-color: rgba(71, 145, 255, 0.2);
+  }
+
+  .owd-profile {
+    color: #9aa7b2;
   }
 }
