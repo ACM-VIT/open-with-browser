@@ -1,8 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 
+export type FallbackProfilePreference = {
+  label: string | null;
+  directory: string | null;
+};
+
 export type FallbackPreference = {
   browser: string;
-  profile?: string | null;
+  profile?: FallbackProfilePreference | null;
 };
 
 export type PreferencesSnapshot = {
@@ -15,7 +20,7 @@ export async function fetchPreferences() {
 
 export async function updateFallbackPreference(input: {
   browser: string | null;
-  profile?: string | null;
+  profile?: FallbackProfilePreference | null;
 }) {
   await invoke('set_fallback_browser', {
     browser: input.browser,

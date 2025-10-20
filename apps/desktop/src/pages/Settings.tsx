@@ -7,21 +7,39 @@ import {
   type as resolveOsType,
   version as osVersion,
 } from '@tauri-apps/plugin-os';
-import { fetchAvailableBrowsers, fetchProfilesFor } from '../lib/routing';
+import {
+  fetchAvailableBrowsers,
+  fetchProfilesFor,
+  type ProfileDescriptorWire,
+} from '../lib/routing';
 import {
   fetchPreferences,
   updateFallbackPreference,
   type FallbackPreference,
 } from '../lib/preferences';
 
-export default function Settings() {
-  const [rememberChoice, setRememberChoice] = useState(true);
-  const [showIcons, setShowIcons] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
+type SettingsProps = {
+  rememberChoice: boolean;
+  showIcons: boolean;
+  debugMode: boolean;
+  onRememberChoiceChange: (value: boolean) => Promise<void> | void;
+  onShowIconsChange: (value: boolean) => Promise<void> | void;
+  onDebugModeChange: (value: boolean) => Promise<void> | void;
+};
+
+export default function Settings({
+  rememberChoice,
+  showIcons,
+  debugMode,
+  onRememberChoiceChange,
+  onShowIconsChange,
+  onDebugModeChange,
+}: SettingsProps) {
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
-  const [availableProfiles, setAvailableProfiles] = useState<string[]>([]);
+  const [availableProfiles, setAvailableProfiles] = useState<ProfileDescriptorWire[]>([]);
   const [fallbackBrowser, setFallbackBrowser] = useState<string>('');
-  const [fallbackProfile, setFallbackProfile] = useState<string>('');
+  const [fallbackProfileDirectory, setFallbackProfileDirectory] = useState<string>('');
+  const [fallbackProfileLabel, setFallbackProfileLabel] = useState<string>('');
   const [savingFallback, setSavingFallback] = useState(false);
   const [fallbackStatus, setFallbackStatus] = useState<string | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<
@@ -124,7 +142,10 @@ export default function Settings() {
     browsers: string[] = availableBrowsers
   ) {
     setFallbackBrowser(fallback.browser);
-    setFallbackProfile(fallback.profile ?? '');
+    const profileLabel = fallback.profile?.label ?? '';
+    const profileDirectory = fallback.profile?.directory ?? '';
+    setFallbackProfileLabel(profileLabel);
+    setFallbackProfileDirectory(profileDirectory);
 
     if (!browsers.includes(fallback.browser)) {
       setAvailableBrowsers(prev =>
@@ -132,13 +153,18 @@ export default function Settings() {
       );
     }
 
-    void loadProfilesForBrowser(fallback.browser, fallback.profile ?? '');
+    void loadProfilesForBrowser(fallback.browser, profileDirectory, profileLabel);
   }
 
-  async function loadProfilesForBrowser(browser: string, profile?: string) {
+  async function loadProfilesForBrowser(
+    browser: string,
+    directory?: string,
+    label?: string
+  ) {
     if (!browser) {
       setAvailableProfiles([]);
-      setFallbackProfile('');
+      setFallbackProfileDirectory('');
+      setFallbackProfileLabel('');
       return;
     }
 
@@ -146,10 +172,24 @@ export default function Settings() {
       const profiles = await fetchProfilesFor(browser);
       setAvailableProfiles(profiles);
 
-      if (profile && profiles.includes(profile)) {
-        setFallbackProfile(profile);
+      if (directory) {
+        const match = profiles.find(p => p.directory === directory);
+        if (match) {
+          setFallbackProfileDirectory(match.directory);
+          setFallbackProfileLabel(match.display_name);
+        } else if (profiles.length === 0) {
+          setFallbackProfileDirectory('');
+          setFallbackProfileLabel('');
+        } else {
+          setFallbackProfileDirectory(directory);
+          setFallbackProfileLabel(label ?? directory);
+        }
       } else if (profiles.length === 0) {
-        setFallbackProfile('');
+        setFallbackProfileDirectory('');
+        setFallbackProfileLabel('');
+      } else {
+        setFallbackProfileDirectory('');
+        setFallbackProfileLabel('');
       }
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -173,13 +213,16 @@ export default function Settings() {
 
   async function handleFallbackBrowserChange(value: string) {
     setFallbackBrowser(value);
-    setFallbackProfile('');
+    setFallbackProfileDirectory('');
+    setFallbackProfileLabel('');
     await loadProfilesForBrowser(value);
     setFallbackStatus(null);
   }
 
   function handleFallbackProfileChange(value: string) {
-    setFallbackProfile(value);
+    setFallbackProfileDirectory(value);
+    const match = availableProfiles.find(profile => profile.directory === value);
+    setFallbackProfileLabel(match?.display_name ?? value);
     setFallbackStatus(null);
   }
 
@@ -189,11 +232,19 @@ export default function Settings() {
     try {
       await updateFallbackPreference({
         browser: fallbackBrowser || null,
-        profile: fallbackProfile || null,
+        profile: fallbackBrowser
+          ? fallbackProfileDirectory
+            ? {
+                label:
+                  fallbackProfileLabel || fallbackProfileDirectory || null,
+                directory: fallbackProfileDirectory,
+              }
+            : null
+          : null,
       });
       setFallbackStatus(
         fallbackBrowser
-          ? `Links without a rule will open in ${fallbackBrowser}${fallbackProfile ? ` · ${fallbackProfile}` : ''}.`
+          ? `Links without a rule will open in ${fallbackBrowser}${fallbackProfileLabel ? ` · ${fallbackProfileLabel}` : ''}.`
           : 'Fallback routing cleared. You will be prompted for each link.'
       );
     } catch (err) {
@@ -302,7 +353,7 @@ export default function Settings() {
             <input
               type='checkbox'
               checked={rememberChoice}
-              onChange={e => setRememberChoice(e.target.checked)}
+              onChange={e => void onRememberChoiceChange(e.target.checked)}
               className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-emerald-400'
             />
           </label>
@@ -320,7 +371,7 @@ export default function Settings() {
             <input
               type='checkbox'
               checked={showIcons}
-              onChange={e => setShowIcons(e.target.checked)}
+              onChange={e => void onShowIconsChange(e.target.checked)}
               className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-amber-400'
             />
           </label>
@@ -350,14 +401,17 @@ export default function Settings() {
             <label className='flex flex-col gap-2 text-sm text-zinc-300'>
               Default profile (optional)
               <select
-                value={fallbackProfile}
+                value={fallbackProfileDirectory}
                 onChange={e => handleFallbackProfileChange(e.target.value)}
                 className='rounded-[16px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
               >
                 <option value=''>No specific profile</option>
                 {availableProfiles.map(profile => (
-                  <option key={profile} value={profile}>
-                    {profile}
+                  <option
+                    key={profile.directory}
+                    value={profile.directory}
+                  >
+                    {profile.display_name || profile.directory}
                   </option>
                 ))}
               </select>
@@ -395,7 +449,7 @@ export default function Settings() {
             <input
               type='checkbox'
               checked={debugMode}
-              onChange={e => setDebugMode(e.target.checked)}
+              onChange={e => void onDebugModeChange(e.target.checked)}
               className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-red-400'
             />
           </label>

@@ -1,14 +1,15 @@
 use crate::{
     browser_details::{
         get_browsers, get_chrome_profiles, get_firefox_profiles, parse_browser_kind, Browsers,
+        ProfileDescriptor,
     },
     platform,
-    preferences::{FallbackPreference, PreferencesState},
+    preferences::{FallbackPreference, PreferencesState, ProfilePreference},
     routing::{
         simulate_link_payload, IncomingLink, LaunchDecision, RoutingSnapshot, RoutingStateHandle,
     },
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::process::Command;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_os::OsType;
@@ -80,7 +81,7 @@ pub fn get_available_browsers() -> Vec<String> {
 }
 
 #[tauri::command]
-pub fn get_profiles(browser_kind: String) -> Result<Vec<String>, String> {
+pub fn get_profiles(browser_kind: String) -> Result<Vec<ProfileDescriptor>, String> {
     let kind = parse_browser_kind(browser_kind.as_str())
         .ok_or_else(|| format!("Unsupported browser: {browser_kind}"))?;
 
@@ -128,6 +129,9 @@ pub async fn simulate_incoming_link(
 
 #[tauri::command]
 pub async fn is_default_browser(app_handle: AppHandle) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    let _ = &app_handle;
+
     match tauri_plugin_os::type_() {
         #[cfg(target_os = "windows")]
         OsType::Windows => {
@@ -205,6 +209,12 @@ pub struct PreferencesSnapshot {
     pub fallback: Option<FallbackPreference>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ProfileSelectionInput {
+    pub label: Option<String>,
+    pub directory: Option<String>,
+}
+
 #[tauri::command]
 pub async fn get_preferences(app_handle: AppHandle) -> Result<PreferencesSnapshot, String> {
     if let Some(state) = app_handle.try_state::<PreferencesState>() {
@@ -219,7 +229,7 @@ pub async fn get_preferences(app_handle: AppHandle) -> Result<PreferencesSnapsho
 pub async fn set_fallback_browser(
     app_handle: AppHandle,
     browser: Option<String>,
-    profile: Option<String>,
+    profile: Option<ProfileSelectionInput>,
 ) -> Result<(), String> {
     let state = app_handle
         .try_state::<PreferencesState>()
@@ -228,12 +238,18 @@ pub async fn set_fallback_browser(
     match browser {
         Some(name) if !name.is_empty() => {
             state
-                .set_fallback(Some(FallbackPreference {
-                    browser: name,
-                    profile: profile.filter(|p| !p.is_empty()),
-                }))
+                .set_fallback(
+                    &app_handle,
+                    Some(FallbackPreference {
+                        browser: name,
+                        profile: profile.map(|p| ProfilePreference {
+                            label: p.label,
+                            directory: p.directory,
+                        }),
+                    }),
+                )
                 .await
         }
-        _ => state.set_fallback(None).await,
+        _ => state.set_fallback(&app_handle, None).await,
     }
 }

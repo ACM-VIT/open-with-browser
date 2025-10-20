@@ -5,7 +5,8 @@ export type BrowserProfile = {
   id: string;
   name: string;
   icon?: string;
-  profile?: string | null;
+  profileLabel?: string | null;
+  profileDirectory?: string | null;
 };
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
     persist: 'just-once' | 'always'
   ) => Promise<void> | void;
   disabled?: boolean;
+  showIcons?: boolean;
 };
 
 export default function OpenWithDialog({
@@ -25,6 +27,7 @@ export default function OpenWithDialog({
   browsers,
   onChoose,
   disabled = false,
+  showIcons = true,
 }: Props) {
   const storeOpen = useUIStore((s: UIState) => s.isDialogOpen);
   const storeSelected = useUIStore((s: UIState) => s.selectedBrowserId);
@@ -105,21 +108,25 @@ export default function OpenWithDialog({
                   onChange={() => setLocalSelected(browser.id)}
                   className='sr-only'
                 />
-                <div className='flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/10 bg-black/40 text-base font-semibold text-zinc-200'>
-                  {browser.icon ? (
-                    <img
-                      src={browser.icon}
-                      alt=''
-                      className='h-8 w-8 rounded-[12px] object-contain'
-                    />
-                  ) : (
-                    fallbackGlyph
-                  )}
-                </div>
-                <div className='flex flex-1 flex-col'>
+                {showIcons ? (
+                  <div className='flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/10 bg-black/40 text-base font-semibold text-zinc-200'>
+                    {browser.icon ? (
+                      <img
+                        src={browser.icon}
+                        alt=''
+                        className='h-8 w-8 rounded-[12px] object-contain'
+                      />
+                    ) : (
+                      fallbackGlyph
+                    )}
+                  </div>
+                ) : null}
+                <div
+                  className={`flex flex-1 flex-col ${showIcons ? '' : 'pl-1'}`}
+                >
                   <span className='text-sm font-semibold'>{browser.name}</span>
                   <span className='text-xs text-zinc-500'>
-                    {browser.profile ?? 'Default profile'}
+                    {browser.profileLabel ?? 'Default profile'}
                   </span>
                 </div>
                 <span

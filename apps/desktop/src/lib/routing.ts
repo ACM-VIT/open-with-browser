@@ -1,10 +1,16 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type { ActiveLink, LaunchHistoryItem } from './models';
+import type { ActiveLink, LaunchHistoryItem, BrowserSelection } from './models';
 
 type BrowserDescriptorWire = {
   name: string;
-  profile?: string | null;
+  profile_label?: string | null;
+  profile_directory?: string | null;
+};
+
+export type ProfileDescriptorWire = {
+  display_name: string;
+  directory: string;
 };
 
 export type IncomingLinkWire = {
@@ -22,7 +28,8 @@ export type LaunchDecisionWire = {
   id: string;
   url: string;
   browser: string;
-  profile?: string | null;
+  profile_label?: string | null;
+  profile_directory?: string | null;
   persist: 'just-once' | 'always';
   decided_at?: string | null;
   source_app: string;
@@ -50,6 +57,13 @@ export function mapIncomingLink(
   wire: IncomingLinkWire | null
 ): ActiveLink | null {
   if (!wire) return null;
+  const recommendedBrowser: BrowserSelection | undefined = wire.recommended_browser
+    ? {
+        name: wire.recommended_browser.name,
+        profileLabel: wire.recommended_browser.profile_label ?? null,
+        profileDirectory: wire.recommended_browser.profile_directory ?? null,
+      }
+    : undefined;
   return {
     id: wire.id,
     url: wire.url,
@@ -57,12 +71,7 @@ export function mapIncomingLink(
     sourceContext: wire.source_context ?? '',
     contactName: wire.contact_name ?? '',
     preview: wire.preview ?? '',
-    recommendedBrowser: wire.recommended_browser
-      ? {
-          name: wire.recommended_browser.name,
-          profile: wire.recommended_browser.profile ?? null,
-        }
-      : undefined,
+    recommendedBrowser,
     arrivedAt: wire.arrived_at ?? new Date().toISOString(),
   };
 }
@@ -73,7 +82,8 @@ export function mapLaunchDecision(wire: LaunchDecisionWire): LaunchHistoryItem {
     url: wire.url,
     decidedAt: wire.decided_at ?? new Date().toISOString(),
     browser: wire.browser,
-    profile: wire.profile ?? null,
+    profileLabel: wire.profile_label ?? null,
+    profileDirectory: wire.profile_directory ?? null,
     persist: wire.persist,
     sourceApp: wire.source_app,
     contactName: wire.contact_name ?? '',
@@ -90,7 +100,7 @@ export async function fetchRoutingSnapshot() {
 
 export async function resolveIncomingLink(input: {
   link: ActiveLink;
-  browser: { name: string; profile?: string | null };
+  browser: BrowserSelection;
   persist: 'just-once' | 'always';
 }) {
   await invoke<LaunchDecisionWire>('resolve_incoming_link', {
@@ -98,7 +108,8 @@ export async function resolveIncomingLink(input: {
       id: input.link.id,
       url: input.link.url,
       browser: input.browser.name,
-      profile: input.browser.profile ?? null,
+      profile_label: input.browser.profileLabel ?? null,
+      profile_directory: input.browser.profileDirectory ?? null,
       persist: input.persist,
       source_app: input.link.sourceApp,
       contact_name: input.link.contactName ?? '',
@@ -176,5 +187,7 @@ export async function fetchAvailableBrowsers() {
 }
 
 export async function fetchProfilesFor(browser: string) {
-  return invoke<string[]>('get_profiles', { browserKind: browser });
+  return invoke<ProfileDescriptorWire[]>('get_profiles', {
+    browserKind: browser,
+  });
 }

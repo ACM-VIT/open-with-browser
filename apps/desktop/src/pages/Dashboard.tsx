@@ -4,23 +4,16 @@ import type { ActiveLink, LaunchHistoryItem } from '../lib/models';
 
 type DashboardProps = {
   activeLink: ActiveLink | null;
+  browsers: BrowserProfile[];
   recentHistory: LaunchHistoryItem[];
   statusById: Record<string, 'launching' | 'launched' | 'failed'>;
   errorsById: Record<string, string>;
-  onSimulateNext: () => Promise<void>;
   onRecordLaunch: (
     browser: BrowserProfile,
     persist: 'just-once' | 'always'
   ) => Promise<void>;
+  showIcons: boolean;
 };
-
-const installedBrowsers: BrowserProfile[] = [
-  { id: 'arc', name: 'Arc', profile: 'Workspace' },
-  { id: 'chrome-work', name: 'Google Chrome', profile: 'Workspace' },
-  { id: 'chrome-personal', name: 'Google Chrome', profile: 'Personal' },
-  { id: 'safari', name: 'Safari', profile: 'Personal' },
-  { id: 'edge', name: 'Microsoft Edge', profile: 'Admin' },
-];
 
 const STATUS_CLASS: Record<'launching' | 'failed' | 'launched', string> = {
   launching: 'border-amber-300/40 bg-amber-500/10 text-amber-200',
@@ -36,14 +29,14 @@ const STATUS_LABEL: Record<'launching' | 'failed' | 'launched', string> = {
 
 export default function Dashboard({
   activeLink,
+  browsers,
   recentHistory,
   statusById,
   errorsById,
-  onSimulateNext,
   onRecordLaunch,
+  showIcons,
 }: DashboardProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
   const [isRouting, setIsRouting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -53,20 +46,23 @@ export default function Dashboard({
   );
 
   const dialogBrowsers = useMemo(() => {
-    if (!recommendedBrowser) return installedBrowsers;
-    const recommendedId = installedBrowsers.find(
-      b =>
-        b.name === recommendedBrowser.name &&
-        (b.profile ?? null) === (recommendedBrowser.profile ?? null)
-    )?.id;
+    if (browsers.length === 0) return [];
+    if (!recommendedBrowser) return browsers;
 
-    if (!recommendedId) return installedBrowsers;
+    const match = browsers.find(browser => {
+      const nameMatches =
+        browser.name.toLowerCase() ===
+        recommendedBrowser.name.toLowerCase();
+      const profileMatches =
+        (browser.profileLabel ?? '').toLowerCase() ===
+        (recommendedBrowser.profileLabel ?? '').toLowerCase();
+      return nameMatches && profileMatches;
+    });
 
-    return [
-      installedBrowsers.find(b => b.id === recommendedId)!,
-      ...installedBrowsers.filter(b => b.id !== recommendedId),
-    ];
-  }, [recommendedBrowser]);
+    if (!match) return browsers;
+
+    return [match, ...browsers.filter(browser => browser.id !== match.id)];
+  }, [browsers, recommendedBrowser]);
 
   const routingStats = useMemo(() => {
     const launching = Object.values(statusById).filter(
@@ -87,25 +83,9 @@ export default function Dashboard({
     };
   }, [activeLink, recentHistory.length, statusById]);
 
-  const handleSimulate = async () => {
-    setIsSimulating(true);
-    setActionError(null);
-    try {
-      await onSimulateNext();
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
   const handleRecommendedLaunch = async () => {
-    if (!recommendedBrowser) return;
-    const matchingBrowser =
-      dialogBrowsers[0] ??
-      ({
-        id: `recommended-${recommendedBrowser.name.toLowerCase()}`,
-        name: recommendedBrowser.name,
-        profile: recommendedBrowser.profile ?? undefined,
-      } satisfies BrowserProfile);
+    if (!recommendedBrowser || dialogBrowsers.length === 0) return;
+    const matchingBrowser = dialogBrowsers[0];
 
     setIsRouting(true);
     setActionError(null);
@@ -176,21 +156,19 @@ export default function Dashboard({
           </div>
           <div className='flex flex-col gap-3'>
             <button
-              onClick={handleSimulate}
-              disabled={isSimulating}
-              className='rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-soft-sm transition enabled:hover:border-emerald-300/50 enabled:hover:text-emerald-200 disabled:opacity-40'
-            >
-              {isSimulating ? 'Seeding…' : 'Simulate another link'}
-            </button>
-            <button
               onClick={() => setDialogOpen(true)}
-              disabled={!activeLink}
+              disabled={!activeLink || dialogBrowsers.length === 0}
               className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-300/70 disabled:opacity-40'
             >
               Choose different browser
             </button>
             {actionError ? (
               <p className='text-xs text-red-300'>{actionError}</p>
+            ) : dialogBrowsers.length === 0 ? (
+              <p className='text-xs text-amber-300'>
+                No browsers detected yet. Refresh from Settings to register installed
+                browsers.
+              </p>
             ) : null}
           </div>
         </div>
@@ -217,8 +195,8 @@ export default function Dashboard({
               </p>
               <p className='mt-2 text-sm font-semibold text-emerald-200'>
                 {recommendedBrowser?.name}
-                {recommendedBrowser?.profile
-                  ? ` · ${recommendedBrowser.profile}`
+                {recommendedBrowser?.profileLabel
+                  ? ` · ${recommendedBrowser.profileLabel}`
                   : ''}
               </p>
               <p className='mt-3 text-xs text-zinc-400'>
@@ -228,19 +206,27 @@ export default function Dashboard({
               <div className='mt-4 flex gap-3'>
                 <button
                   onClick={handleRecommendedLaunch}
-                  disabled={!recommendedBrowser || isRouting}
+                  disabled={
+                    !recommendedBrowser || isRouting || dialogBrowsers.length === 0
+                  }
                   className='flex-1 rounded-[18px] border border-emerald-300/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-200/70 disabled:opacity-40'
                 >
                   {isRouting ? 'Launching…' : 'Open with recommendation'}
                 </button>
                 <button
                   onClick={() => setDialogOpen(true)}
-                  disabled={isRouting}
+                  disabled={isRouting || dialogBrowsers.length === 0}
                   className='rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-soft-sm transition enabled:hover:border-amber-300/40 enabled:hover:text-amber-200 disabled:opacity-40'
                 >
                   Override
                 </button>
               </div>
+              {dialogBrowsers.length === 0 ? (
+                <p className='mt-3 text-xs text-amber-300'>
+                  No browsers detected yet. Check Settings → System setup to load
+                  installed browsers.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -299,7 +285,7 @@ export default function Dashboard({
                       <p className='text-sm font-semibold text-zinc-100'>
                         {item.browser}{' '}
                         <span className='text-xs font-normal text-zinc-500'>
-                          {item.profile ?? 'Default profile'}
+                          {item.profileLabel ?? 'Default profile'}
                         </span>
                       </p>
                       <p className='max-w-xl truncate text-xs text-zinc-400'>
@@ -378,11 +364,12 @@ export default function Dashboard({
       </section>
 
       <OpenWithDialog
-        open={dialogOpen && !!activeLink}
+        open={dialogOpen && !!activeLink && dialogBrowsers.length > 0}
         onClose={() => setDialogOpen(false)}
         browsers={dialogBrowsers}
         onChoose={handleManualLaunch}
         disabled={isRouting}
+        showIcons={showIcons}
       />
     </div>
   );

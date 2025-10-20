@@ -95,8 +95,8 @@ export default function Layout({
                 Recommended:{' '}
                 <span className='font-semibold text-emerald-200'>
                   {activeLink.recommendedBrowser.name}
-                  {activeLink.recommendedBrowser.profile
-                    ? ` · ${activeLink.recommendedBrowser.profile}`
+                  {activeLink.recommendedBrowser.profileLabel
+                    ? ` · ${activeLink.recommendedBrowser.profileLabel}`
                     : ''}
                 </span>
               </div>

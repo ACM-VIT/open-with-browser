@@ -1,20 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
 import Settings from './pages/Settings';
 import { ActiveLink, LaunchHistoryItem } from './lib/models';
 import {
+  fetchAvailableBrowsers,
   fetchRoutingSnapshot,
   listenIncomingLink,
   listenLaunchDecision,
   listenRoutingStatus,
   listenRoutingError,
   resolveIncomingLink,
-  simulateIncomingLink,
+  fetchProfilesFor,
   type RoutingStatusWire,
 } from './lib/routing';
 import type { BrowserProfile } from './OpenWithDialog';
+import {
+  DEFAULT_UI_SETTINGS,
+  loadUiSettings,
+  persistLastSelectedBrowser,
+  setUiSetting,
+  type UiSettings,
+} from './lib/storage';
+import { useUIStore } from './store/uiStore';
 
 type PageKey = 'dashboard' | 'rules' | 'settings';
 type StatusMap = Record<string, RoutingStatusWire['status']>;
@@ -28,6 +37,42 @@ export default function App() {
   const [errorsById, setErrorsById] = useState<ErrorMap>({});
   const [ready, setReady] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [browserCatalog, setBrowserCatalog] = useState<BrowserProfile[]>([]);
+  const [uiSettings, setUiSettings] = useState<UiSettings>(DEFAULT_UI_SETTINGS);
+  const [settingsReady, setSettingsReady] = useState(false);
+
+  const setDialogSelectedBrowser = useUIStore(
+    state => state.setSelectedBrowser
+  );
+  const resetDialogSelection = useUIStore(state => state.resetSelection);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const settings = await loadUiSettings();
+        if (cancelled) return;
+        setUiSettings(settings);
+        setSettingsReady(true);
+        if (settings.lastSelectedBrowserId) {
+          setDialogSelectedBrowser(settings.lastSelectedBrowserId);
+        } else {
+          resetDialogSelection();
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to load UI settings', err);
+        if (!cancelled) {
+          setSettingsReady(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resetDialogSelection, setDialogSelectedBrowser]);
 
   useEffect(() => {
     let unlisten: Array<() => void> = [];
@@ -90,11 +135,158 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const normalize = (value: string | null | undefined) =>
+      (value ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+    const browserId = (name: string, directory: string | null | undefined) => {
+      const base = normalize(name);
+      const suffix = directory ? normalize(directory) : 'default';
+      return `${base}__${suffix}`;
+    };
+
+    (async () => {
+      try {
+        const names = await fetchAvailableBrowsers();
+        const catalog = new Map<string, BrowserProfile>();
+
+        for (const name of names) {
+          try {
+            const profiles = await fetchProfilesFor(name);
+            if (profiles && profiles.length > 0) {
+              profiles.forEach(profile => {
+                const id = browserId(name, profile.directory);
+                catalog.set(id, {
+                  id,
+                  name,
+                  profileLabel: profile.display_name,
+                  profileDirectory: profile.directory,
+                });
+              });
+            }
+
+            const defaultId = browserId(name, null);
+            if (!catalog.has(defaultId)) {
+              catalog.set(defaultId, {
+                id: defaultId,
+                name,
+                profileLabel: null,
+                profileDirectory: null,
+              });
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`Unable to load profiles for ${name}`, err);
+            const defaultId = browserId(name, null);
+            if (!catalog.has(defaultId)) {
+              catalog.set(defaultId, {
+                id: defaultId,
+                name,
+                profileLabel: null,
+                profileDirectory: null,
+              });
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setBrowserCatalog(Array.from(catalog.values()));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.warn('Unable to load available browsers', err);
+          setBrowserCatalog([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!settingsReady) return;
+
+    if (uiSettings.lastSelectedBrowserId) {
+      const exists = browserCatalog.some(
+        browser => browser.id === uiSettings.lastSelectedBrowserId
+      );
+
+      if (!exists) {
+        (async () => {
+          await persistLastSelectedBrowser(null);
+          setUiSettings(prev => ({
+            ...prev,
+            lastSelectedBrowserId: null,
+          }));
+          resetDialogSelection();
+        })().catch(err => {
+          // eslint-disable-next-line no-console
+          console.warn('Unable to reset last browser selection', err);
+        });
+      }
+    }
+  }, [browserCatalog, resetDialogSelection, settingsReady, uiSettings.lastSelectedBrowserId]);
+
   const recentHistory = useMemo(() => history.slice(0, 5), [history]);
 
-  const handleSimulateLink = async () => {
-    await simulateIncomingLink();
-  };
+  const handleRememberChoiceChange = useCallback(
+    async (value: boolean) => {
+      try {
+        await setUiSetting('rememberChoice', value);
+        setUiSettings(prev => ({
+          ...prev,
+          rememberChoice: value,
+        }));
+        if (!value) {
+          await persistLastSelectedBrowser(null);
+          setUiSettings(prev => ({
+            ...prev,
+            lastSelectedBrowserId: null,
+          }));
+          resetDialogSelection();
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to update remember choice setting', err);
+      }
+    },
+    [resetDialogSelection]
+  );
+
+  const handleShowIconsChange = useCallback(async (value: boolean) => {
+    try {
+      await setUiSetting('showIcons', value);
+      setUiSettings(prev => ({
+        ...prev,
+        showIcons: value,
+      }));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to update show icons setting', err);
+    }
+  }, []);
+
+  const handleDebugModeChange = useCallback(async (value: boolean) => {
+    try {
+      await setUiSetting('debugMode', value);
+      setUiSettings(prev => ({
+        ...prev,
+        debugMode: value,
+      }));
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to update debug mode setting', err);
+    }
+  }, []);
 
   const handleRecordLaunch = async (
     browser: BrowserProfile,
@@ -110,10 +302,24 @@ export default function App() {
         link: activeLink,
         browser: {
           name: browser.name,
-          profile: browser.profile ?? null,
+          profileLabel: browser.profileLabel ?? null,
+          profileDirectory: browser.profileDirectory ?? null,
         },
         persist,
       });
+      if (uiSettings.rememberChoice) {
+        try {
+          await persistLastSelectedBrowser(browser.id);
+          setUiSettings(prev => ({
+            ...prev,
+            lastSelectedBrowserId: browser.id,
+          }));
+          setDialogSelectedBrowser(browser.id);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('Unable to persist last browser selection', err);
+        }
+      }
       setErrorsById(prev => {
         const next = { ...prev };
         delete next[activeLink.id];
@@ -134,26 +340,37 @@ export default function App() {
         return (
           <Dashboard
             activeLink={activeLink}
+            browsers={browserCatalog}
             recentHistory={recentHistory}
             statusById={statusById}
             errorsById={errorsById}
-            onSimulateNext={handleSimulateLink}
             onRecordLaunch={handleRecordLaunch}
+            showIcons={uiSettings.showIcons}
           />
         );
       case 'rules':
-        return <Rules />;
+        return <Rules availableBrowsers={browserCatalog} />;
       case 'settings':
-        return <Settings />;
+        return (
+          <Settings
+            rememberChoice={uiSettings.rememberChoice}
+            showIcons={uiSettings.showIcons}
+            debugMode={uiSettings.debugMode}
+            onRememberChoiceChange={handleRememberChoiceChange}
+            onShowIconsChange={handleShowIconsChange}
+            onDebugModeChange={handleDebugModeChange}
+          />
+        );
       default:
         return (
           <Dashboard
             activeLink={activeLink}
+            browsers={browserCatalog}
             recentHistory={recentHistory}
             statusById={statusById}
             errorsById={errorsById}
-            onSimulateNext={handleSimulateLink}
             onRecordLaunch={handleRecordLaunch}
+            showIcons={uiSettings.showIcons}
           />
         );
     }
