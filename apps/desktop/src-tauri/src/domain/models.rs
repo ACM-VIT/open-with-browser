@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -15,13 +15,12 @@ pub struct Rule {
 pub struct Condition {
     pub fact: String,
     pub operator: String,
-    pub value: String 
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Action {
     pub profile: String,
     pub browser: String,
-    pub url: String
+    pub url: String,
 }
-

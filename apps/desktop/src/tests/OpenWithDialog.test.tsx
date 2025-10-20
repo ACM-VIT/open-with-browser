@@ -6,8 +6,13 @@ import OpenWithDialog, { type BrowserProfile } from '../OpenWithDialog';
 import { describe, it, expect, vi } from 'vitest';
 
 const browsers: BrowserProfile[] = [
-  { id: 'b1', name: 'Chrome', profile: 'Personal' },
-  { id: 'b2', name: 'Firefox', profile: 'Work' },
+  {
+    id: 'b1',
+    name: 'Chrome',
+    profileLabel: 'Personal',
+    profileDirectory: null,
+  },
+  { id: 'b2', name: 'Firefox', profileLabel: 'Work', profileDirectory: null },
 ];
 
 describe('OpenWithDialog (accessibility + keyboard)', () => {

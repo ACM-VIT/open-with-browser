@@ -5,10 +5,7 @@ export type ActiveLink = {
   sourceContext: string;
   contactName: string;
   preview: string;
-  recommendedBrowser: {
-    name: string;
-    profile?: string | null;
-  };
+  recommendedBrowser?: BrowserSelection;
   arrivedAt: string;
 };
 
@@ -17,8 +14,15 @@ export type LaunchHistoryItem = {
   url: string;
   decidedAt: string;
   browser: string;
-  profile?: string | null;
+  profileLabel?: string | null;
+  profileDirectory?: string | null;
   persist: 'just-once' | 'always';
   sourceApp: string;
   contactName: string;
+};
+
+export type BrowserSelection = {
+  name: string;
+  profileLabel?: string | null;
+  profileDirectory?: string | null;
 };

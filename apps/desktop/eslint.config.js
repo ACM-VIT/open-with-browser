@@ -40,6 +40,8 @@ export default [
       ...reactHooks.configs.recommended.rules,
       ...prettierConfig.rules,
 
+      'no-undef': 'off',
+
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' },
