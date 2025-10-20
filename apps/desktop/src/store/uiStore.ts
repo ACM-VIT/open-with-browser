@@ -38,7 +38,7 @@ export const useUIStore = create<UIState>(
     openDialog: () => set({ isDialogOpen: true }),
     closeDialog: () => set({ isDialogOpen: false }),
     toggleDialog: () =>
-      set((s: UIState) => ({ isDialogOpen: !s.isDialogOpen })),
+      set((state: UIState) => ({ isDialogOpen: !state.isDialogOpen })),
 
     setSelectedBrowser: (id: string | null) => set({ selectedBrowserId: id }),
     setSelectedProfile: (id: string | null) => set({ selectedProfileId: id }),

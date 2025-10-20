@@ -125,10 +125,13 @@ export default function Layout({
                 </span>
                 <span className='text-[11px] text-zinc-500'>
                   {activeLink.sourceApp} •{' '}
-                  {new Date(activeLink.arrivedAt).toLocaleTimeString(undefined, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {new Date(activeLink.arrivedAt).toLocaleTimeString(
+                    undefined,
+                    {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }
+                  )}
                 </span>
               </div>
             </div>

@@ -11,9 +11,7 @@ export default function Settings() {
       <section className='panel'>
         <div className='flex flex-wrap items-start justify-between gap-6'>
           <div>
-            <h2 className='text-2xl font-semibold text-zinc-50'>
-              Experience
-            </h2>
+            <h2 className='text-2xl font-semibold text-zinc-50'>Experience</h2>
             <p className='mt-2 max-w-2xl text-sm text-zinc-400'>
               Personalize how the desktop shell surfaces asynchronous launches
               and how link hand-offs should behave by default.
@@ -51,7 +49,8 @@ export default function Settings() {
                 Show browser glyphs
               </p>
               <p className='text-xs text-zinc-500'>
-                Surface brand glyphs in the hand-off list for quicker recognition.
+                Surface brand glyphs in the hand-off list for quicker
+                recognition.
               </p>
             </div>
             <input

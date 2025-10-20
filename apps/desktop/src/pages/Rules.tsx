@@ -47,9 +47,9 @@ export default function Rules() {
               Routing rules
             </h2>
             <p className='mt-2 max-w-2xl text-sm text-zinc-400'>
-              Describe how domains and file types map to browser profiles.
-              These rules power the asynchronous hand-off without blocking the
-              desktop shell.
+              Describe how domains and file types map to browser profiles. These
+              rules power the asynchronous hand-off without blocking the desktop
+              shell.
             </p>
           </div>
           <button className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70'>

@@ -46,10 +46,7 @@ export default function App() {
   const [activeLink, setActiveLink] = useState<ActiveLink>(incomingLinks[0]);
   const [history, setHistory] = useState<LaunchHistoryItem[]>([]);
 
-  const recentHistory = useMemo(
-    () => history.slice(0, 5),
-    [history]
-  );
+  const recentHistory = useMemo(() => history.slice(0, 5), [history]);
 
   const cycleIncomingLink = () => {
     const nextIndex = incomingPointer % incomingLinks.length;

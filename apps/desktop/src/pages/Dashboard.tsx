@@ -123,7 +123,9 @@ export default function Dashboard({
               <p className='mt-2 text-sm font-semibold text-zinc-100'>
                 {activeLink.contactName}
               </p>
-              <p className='text-xs text-zinc-500'>{activeLink.sourceContext}</p>
+              <p className='text-xs text-zinc-500'>
+                {activeLink.sourceContext}
+              </p>
               <p className='mt-3 text-xs text-zinc-400'>
                 Message preview: “{activeLink.preview}”
               </p>

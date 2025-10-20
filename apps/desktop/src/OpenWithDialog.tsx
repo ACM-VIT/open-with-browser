@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { type UIState, useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
@@ -23,26 +23,19 @@ export default function OpenWithDialog({
 }: Props) {
   const storeOpen = useUIStore((s: UIState) => s.isDialogOpen);
   const storeSelected = useUIStore((s: UIState) => s.selectedBrowserId);
-  const setSelectedBrowser = useUIStore(
-    (s: UIState) => s.setSelectedBrowser
-  );
+  const setSelectedBrowser = useUIStore((s: UIState) => s.setSelectedBrowser);
   const closeDialog = useUIStore((s: UIState) => s.closeDialog);
 
   const open = openProp ?? storeOpen;
 
-  const [selected, setSelected] = useState<string | null>(
-    storeSelected ?? browsers[0]?.id ?? null
-  );
-
-  useEffect(() => {
-    if (open) {
-      setSelected(storeSelected ?? browsers[0]?.id ?? null);
-    }
-  }, [open, storeSelected, browsers]);
+  const [localSelected, setLocalSelected] = useState<string | null>(null);
+  const defaultSelection = storeSelected ?? browsers[0]?.id ?? null;
+  const selected = localSelected ?? defaultSelection;
 
   if (!open) return null;
 
   const handleClose = () => {
+    setLocalSelected(null);
     if (onCloseProp) onCloseProp();
     else closeDialog();
   };
@@ -52,6 +45,7 @@ export default function OpenWithDialog({
     if (browser) {
       setSelectedBrowser(browser.id);
       onChoose(browser, persist);
+      setLocalSelected(null);
     }
   };
 
@@ -95,7 +89,7 @@ export default function OpenWithDialog({
                   name='owd-browser'
                   value={browser.id}
                   checked={isSelected}
-                  onChange={() => setSelected(browser.id)}
+                  onChange={() => setLocalSelected(browser.id)}
                   className='sr-only'
                 />
                 <div className='flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/10 bg-black/40 text-base font-semibold text-zinc-200'>
