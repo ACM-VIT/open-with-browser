@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
   id: string;
@@ -8,46 +9,49 @@ export type BrowserProfile = {
 };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
   browsers: BrowserProfile[];
   onChoose: (browser: BrowserProfile, persist: 'just-once' | 'always') => void;
 };
 
 export default function OpenWithDialog({
-  open,
-  onClose,
+  open: openProp,
+  onClose: onCloseProp,
   browsers,
   onChoose,
 }: Props) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const storeOpen = useUIStore(s => s.isDialogOpen);
+  const storeSelected = useUIStore(s => s.selectedBrowserId);
+  const setSelectedBrowser = useUIStore(s => s.setSelectedBrowser);
+  const closeDialog = useUIStore(s => s.closeDialog);
 
-  useEffect(() => {
-    if (open) {
-      setSelected(browsers[0]?.id ?? null);
-    }
-  }, [open, browsers]);
+  const open = openProp ?? storeOpen;
+
+  const [selected, setSelected] = useState<string | null>(
+    storeSelected ?? browsers[0]?.id ?? null
+  );
 
   if (!open) return null;
 
+  const handleClose = () => {
+    if (onCloseProp) onCloseProp();
+    else closeDialog();
+  };
+
   const handleChoose = (persist: 'just-once' | 'always') => {
-    const browser = browsers.find(b => b.id === selected);
-    if (browser) onChoose(browser, persist);
+    const b = browsers.find(b => b.id === selected);
+    if (b) {
+      setSelectedBrowser(b.id);
+      onChoose(b, persist);
+    }
   };
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur'>
-      <div
-        role='dialog'
-        aria-modal='true'
-        className='relative w-[min(92vw,560px)] max-w-[560px] rounded-[28px] border border-white/5 bg-zinc-950/90 p-6 shadow-soft'
-      >
-        <button
-          aria-label='Close'
-          className='absolute right-3 top-3 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
-          onClick={onClose}
-        >
-          Esc
+    <div className='owd-backdrop'>
+      <div className='owd-dialog' role='dialog' aria-modal='true'>
+        <button aria-label='Close' className='owd-close' onClick={handleClose}>
+          ×
         </button>
 
         <header>
