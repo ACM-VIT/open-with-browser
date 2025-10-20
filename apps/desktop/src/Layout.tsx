@@ -90,15 +90,17 @@ export default function Layout({
                 {activeLink.contactName}
               </p>
             </div>
-            <div className='rounded-[18px] border border-white/5 bg-black/30 px-3 py-2 text-xs text-zinc-400'>
-              Recommended:{' '}
-              <span className='font-semibold text-emerald-200'>
-                {activeLink.recommendedBrowser.name}
-                {activeLink.recommendedBrowser.profile
-                  ? ` · ${activeLink.recommendedBrowser.profile}`
-                  : ''}
-              </span>
-            </div>
+            {activeLink.recommendedBrowser ? (
+              <div className='rounded-[18px] border border-white/5 bg-black/30 px-3 py-2 text-xs text-zinc-400'>
+                Recommended:{' '}
+                <span className='font-semibold text-emerald-200'>
+                  {activeLink.recommendedBrowser.name}
+                  {activeLink.recommendedBrowser.profile
+                    ? ` · ${activeLink.recommendedBrowser.profile}`
+                    : ''}
+                </span>
+              </div>
+            ) : null}
           </div>
         ) : (
           <p className='mt-4 text-sm text-zinc-500'>

@@ -1,81 +1,131 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
 import Settings from './pages/Settings';
 import { ActiveLink, LaunchHistoryItem } from './lib/models';
+import {
+  fetchRoutingSnapshot,
+  listenIncomingLink,
+  listenLaunchDecision,
+  listenRoutingStatus,
+  listenRoutingError,
+  resolveIncomingLink,
+  simulateIncomingLink,
+  type RoutingStatusWire,
+} from './lib/routing';
+import type { BrowserProfile } from './OpenWithDialog';
 
 type PageKey = 'dashboard' | 'rules' | 'settings';
-
-const incomingLinks: ActiveLink[] = [
-  {
-    id: 'inc-401',
-    url: 'https://calendar.app/google/invite/team-sync',
-    sourceApp: 'WhatsApp Desktop',
-    sourceContext: 'Marketing · Standup thread',
-    contactName: 'Maya Singh',
-    preview: 'Quick reminder: standup notes are here.',
-    recommendedBrowser: { name: 'Arc', profile: 'Workspace' },
-    arrivedAt: new Date(Date.now() - 45 * 1000).toISOString(),
-  },
-  {
-    id: 'inc-402',
-    url: 'https://miro.com/app/board/strategy-review',
-    sourceApp: 'Slack',
-    sourceContext: '#strategy-room',
-    contactName: 'Strategy Ops',
-    preview: 'Please open this before the call.',
-    recommendedBrowser: { name: 'Chrome', profile: 'Finance' },
-    arrivedAt: new Date(Date.now() - 15 * 1000).toISOString(),
-  },
-  {
-    id: 'inc-403',
-    url: 'https://docs.google.com/spreadsheets/d/Q4-benchmark',
-    sourceApp: 'Microsoft Teams',
-    sourceContext: 'Product Council',
-    contactName: 'Jordan',
-    preview: 'Latest benchmark numbers.',
-    recommendedBrowser: { name: 'Chrome', profile: 'Workspace' },
-    arrivedAt: new Date(Date.now() - 5 * 1000).toISOString(),
-  },
-];
+type StatusMap = Record<string, RoutingStatusWire['status']>;
+type ErrorMap = Record<string, string>;
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageKey>('dashboard');
-  const [incomingPointer, setIncomingPointer] = useState(1);
-  const [activeLink, setActiveLink] = useState<ActiveLink>(incomingLinks[0]);
+  const [activeLink, setActiveLink] = useState<ActiveLink | null>(null);
   const [history, setHistory] = useState<LaunchHistoryItem[]>([]);
+  const [statusById, setStatusById] = useState<StatusMap>({});
+  const [errorsById, setErrorsById] = useState<ErrorMap>({});
+  const [ready, setReady] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let unlisten: Array<() => void> = [];
+
+    const setup = async () => {
+      try {
+        const snapshot = await fetchRoutingSnapshot();
+        setActiveLink(snapshot.active);
+        setHistory(snapshot.history);
+        setReady(true);
+
+        const removeIncoming = await listenIncomingLink(link => {
+          setActiveLink(link);
+        });
+        const removeDecision = await listenLaunchDecision(decision => {
+          setHistory(prev => [
+            decision,
+            ...prev.filter(item => item.id !== decision.id),
+          ]);
+        });
+        const removeStatus = await listenRoutingStatus(status => {
+          setStatusById(prev => ({
+            ...prev,
+            [status.id]: status.status,
+          }));
+          if (status.status !== 'failed') {
+            setErrorsById(prev => {
+              const next = { ...prev };
+              delete next[status.id];
+              return next;
+            });
+          }
+        });
+
+        const removeError = await listenRoutingError(error => {
+          setErrorsById(prev => ({
+            ...prev,
+            [error.id]: error.message,
+          }));
+          setStatusById(prev => ({
+            ...prev,
+            [error.id]: 'failed',
+          }));
+        });
+
+        unlisten = [removeIncoming, removeDecision, removeStatus, removeError];
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? `Failed to connect to routing service: ${err.message}`
+            : 'Failed to connect to routing service.';
+        setInitError(message);
+        setReady(true);
+      }
+    };
+
+    setup();
+    return () => {
+      unlisten.forEach(fn => fn());
+    };
+  }, []);
 
   const recentHistory = useMemo(() => history.slice(0, 5), [history]);
 
-  const cycleIncomingLink = () => {
-    const nextIndex = incomingPointer % incomingLinks.length;
-    setActiveLink(incomingLinks[nextIndex]);
-    setIncomingPointer(nextIndex + 1);
+  const handleSimulateLink = async () => {
+    await simulateIncomingLink();
   };
 
-  const handleRecordLaunch = (
-    browser: string,
-    profile: string | null | undefined,
+  const handleRecordLaunch = async (
+    browser: BrowserProfile,
     persist: 'just-once' | 'always'
   ) => {
     if (!activeLink) return;
-
-    setHistory(prev => [
-      {
-        id: `hist-${Date.now()}`,
-        url: activeLink.url,
-        decidedAt: new Date().toISOString(),
-        browser,
-        profile,
-        persist,
-        sourceApp: activeLink.sourceApp,
-        contactName: activeLink.contactName,
-      },
+    setStatusById(prev => ({
       ...prev,
-    ]);
-
-    cycleIncomingLink();
+      [activeLink.id]: 'launching',
+    }));
+    try {
+      await resolveIncomingLink({
+        link: activeLink,
+        browser: {
+          name: browser.name,
+          profile: browser.profile ?? null,
+        },
+        persist,
+      });
+      setErrorsById(prev => {
+        const next = { ...prev };
+        delete next[activeLink.id];
+        return next;
+      });
+    } catch (err) {
+      setStatusById(prev => ({
+        ...prev,
+        [activeLink.id]: 'failed',
+      }));
+      throw err;
+    }
   };
 
   const renderPage = () => {
@@ -85,7 +135,9 @@ export default function App() {
           <Dashboard
             activeLink={activeLink}
             recentHistory={recentHistory}
-            onSimulateNext={cycleIncomingLink}
+            statusById={statusById}
+            errorsById={errorsById}
+            onSimulateNext={handleSimulateLink}
             onRecordLaunch={handleRecordLaunch}
           />
         );
@@ -98,7 +150,9 @@ export default function App() {
           <Dashboard
             activeLink={activeLink}
             recentHistory={recentHistory}
-            onSimulateNext={cycleIncomingLink}
+            statusById={statusById}
+            errorsById={errorsById}
+            onSimulateNext={handleSimulateLink}
             onRecordLaunch={handleRecordLaunch}
           />
         );
@@ -111,7 +165,19 @@ export default function App() {
       onNavigate={setCurrentPage}
       activeLink={activeLink}
     >
-      {renderPage()}
+      {ready ? (
+        initError ? (
+          <div className='flex h-full items-center justify-center text-sm text-red-300'>
+            {initError}
+          </div>
+        ) : (
+          renderPage()
+        )
+      ) : (
+        <div className='flex h-full items-center justify-center text-sm text-zinc-500'>
+          Initialising routing service…
+        </div>
+      )}
     </Layout>
   );
 }

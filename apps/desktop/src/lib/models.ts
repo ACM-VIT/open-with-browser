@@ -5,7 +5,7 @@ export type ActiveLink = {
   sourceContext: string;
   contactName: string;
   preview: string;
-  recommendedBrowser: {
+  recommendedBrowser?: {
     name: string;
     profile?: string | null;
   };

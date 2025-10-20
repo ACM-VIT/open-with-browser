@@ -141,10 +141,10 @@ bun run tauri build
 
 ---
 
-## Usage (Planned)
+## Usage
 
 1) Launch the app.
-2) In Settings, register Open With Browser as your default handler for http/https.
+2) In Settings, use **Open default-app settings** to trigger OS registration (the app writes the required manifests before opening the system panel).
 3) Create a few rules (e.g., host: github.com → Chrome [Coding]).
 4) Click a link anywhere—matching rules will route it automatically.
 5) If unmatched, the “Open With” dialog appears; choose a browser/profile:

@@ -12,7 +12,11 @@ type Props = {
   open?: boolean;
   onClose?: () => void;
   browsers: BrowserProfile[];
-  onChoose: (browser: BrowserProfile, persist: 'just-once' | 'always') => void;
+  onChoose: (
+    browser: BrowserProfile,
+    persist: 'just-once' | 'always'
+  ) => Promise<void> | void;
+  disabled?: boolean;
 };
 
 export default function OpenWithDialog({
@@ -20,6 +24,7 @@ export default function OpenWithDialog({
   onClose: onCloseProp,
   browsers,
   onChoose,
+  disabled = false,
 }: Props) {
   const storeOpen = useUIStore((s: UIState) => s.isDialogOpen);
   const storeSelected = useUIStore((s: UIState) => s.selectedBrowserId);
@@ -29,6 +34,7 @@ export default function OpenWithDialog({
   const open = openProp ?? storeOpen;
 
   const [localSelected, setLocalSelected] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const defaultSelection = storeSelected ?? browsers[0]?.id ?? null;
   const selected = localSelected ?? defaultSelection;
 
@@ -40,12 +46,19 @@ export default function OpenWithDialog({
     else closeDialog();
   };
 
-  const handleChoose = (persist: 'just-once' | 'always') => {
+  const handleChoose = async (persist: 'just-once' | 'always') => {
     const browser = browsers.find(b => b.id === selected);
     if (browser) {
-      setSelectedBrowser(browser.id);
-      onChoose(browser, persist);
-      setLocalSelected(null);
+      setSubmitting(true);
+      try {
+        await onChoose(browser, persist);
+        setSelectedBrowser(browser.id);
+        setLocalSelected(null);
+        setSubmitting(false);
+      } catch (error) {
+        setSubmitting(false);
+        throw error;
+      }
     }
   };
 
@@ -124,15 +137,17 @@ export default function OpenWithDialog({
         <div className='mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
           <button
             onClick={() => handleChoose('just-once')}
-            className='flex-1 rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-200 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
+            disabled={disabled || submitting}
+            className='flex-1 rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-200 shadow-soft-sm transition enabled:hover:border-amber-400/40 enabled:hover:text-amber-200 disabled:opacity-40'
           >
-            Just once
+            {submitting ? 'Applying…' : 'Just once'}
           </button>
           <button
             onClick={() => handleChoose('always')}
-            className='flex-1 rounded-[18px] border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70'
+            disabled={disabled || submitting}
+            className='flex-1 rounded-[18px] border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-300/70 disabled:opacity-40'
           >
-            Always use this
+            {submitting ? 'Saving…' : 'Always use this'}
           </button>
         </div>
       </div>
