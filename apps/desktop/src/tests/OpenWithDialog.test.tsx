@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import OpenWithDialog, { type BrowserProfile } from '../OpenWithDialog';
+import { describe, it, expect, vi } from 'vitest';
 
 const browsers: BrowserProfile[] = [
   { id: 'b1', name: 'Chrome', profile: 'Personal' },
@@ -11,27 +12,36 @@ const browsers: BrowserProfile[] = [
 
 describe('OpenWithDialog (accessibility + keyboard)', () => {
   it('moves focus to first radio and traps focus, closes on ESC and backdrop', async () => {
-  const onChoose = jest.fn();
-  const onClose = jest.fn();
+    const onChoose = vi.fn();
+    const onClose = vi.fn();
 
-  const user = userEvent.setup();
-  render(<OpenWithDialog open={true} onClose={onClose} browsers={browsers} onChoose={onChoose} />);
+    const user = userEvent.setup();
+    render(
+      <OpenWithDialog
+        open={true}
+        onClose={onClose}
+        browsers={browsers}
+        onChoose={onChoose}
+      />
+    );
 
-  const radios = screen.getAllByRole('radio');
-  const firstRadio = radios[0];
-  expect(firstRadio).toHaveFocus();
+    const radios = screen.getAllByRole('radio');
+    const firstRadio = radios[0];
+    expect(firstRadio).toHaveFocus();
 
-  await user.tab();
-  await user.tab();
-  await user.tab();
-  expect(firstRadio).toHaveFocus();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    expect(firstRadio).toHaveFocus();
 
-  await user.keyboard('{Escape}');
-  expect(onClose).toHaveBeenCalled();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('has no detectable axe accessibility violations', async () => {
-    const { container } = render(<OpenWithDialog open={true} browsers={browsers} onChoose={() => {}} />);
+    const { container } = render(
+      <OpenWithDialog open={true} browsers={browsers} onChoose={() => {}} />
+    );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
