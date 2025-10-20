@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply font-sans bg-zinc-950 text-zinc-100 antialiased;
+  }
+
+  #root {
+    @apply h-screen w-screen overflow-hidden bg-transparent;
+  }
+}
+
+@utility shadow-soft {
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.45),
+    0 2px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+@utility shadow-soft-sm {
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[26px] border border-white/5 bg-zinc-950/70 p-6 shadow-soft;
+  }
+
+  .panel-title {
+    @apply text-lg font-semibold text-zinc-100;
+  }
+
+  .panel-subtitle {
+    @apply text-sm text-zinc-400;
+  }
+}
