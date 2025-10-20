@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
   id: string;
@@ -8,33 +9,48 @@ export type BrowserProfile = {
 };
 
 type Props = {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
   browsers: BrowserProfile[];
   onChoose: (browser: BrowserProfile, persist: 'just-once' | 'always') => void;
 };
 
 export default function OpenWithDialog({
-  open,
-  onClose,
+  open: openProp,
+  onClose: onCloseProp,
   browsers,
   onChoose,
 }: Props) {
+  const storeOpen = useUIStore(s => s.isDialogOpen);
+  const storeSelected = useUIStore(s => s.selectedBrowserId);
+  const setSelectedBrowser = useUIStore(s => s.setSelectedBrowser);
+  const closeDialog = useUIStore(s => s.closeDialog);
+
+  const open = openProp ?? storeOpen;
+
   const [selected, setSelected] = useState<string | null>(
-    browsers[0]?.id ?? null
+    storeSelected ?? browsers[0]?.id ?? null
   );
 
   if (!open) return null;
 
+  const handleClose = () => {
+    if (onCloseProp) onCloseProp();
+    else closeDialog();
+  };
+
   const handleChoose = (persist: 'just-once' | 'always') => {
     const b = browsers.find(b => b.id === selected);
-    if (b) onChoose(b, persist);
+    if (b) {
+      setSelectedBrowser(b.id);
+      onChoose(b, persist);
+    }
   };
 
   return (
     <div className='owd-backdrop'>
       <div className='owd-dialog' role='dialog' aria-modal='true'>
-        <button aria-label='Close' className='owd-close' onClick={onClose}>
+        <button aria-label='Close' className='owd-close' onClick={handleClose}>
           ×
         </button>
         <h2>Open with</h2>
