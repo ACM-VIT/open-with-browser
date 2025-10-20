@@ -82,13 +82,13 @@ pub fn get_chrome_based_profiles(
 
             let mut profiles: Vec<ProfileDescriptor> = Vec::new();
 
-            for (_profile_key, profile_data) in info_cache.iter() {
+            for (profile_key, profile_data) in info_cache.iter() {
                 let directory = profile_data
                     .get("profile_dir")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_owned())
                     .filter(|s| !s.is_empty())
-                    .unwrap_or_else(|| "Default".to_string());
+                    .unwrap_or_else(|| profile_key.to_owned());
 
                 let display = profile_data
                     .get("gaia_name")
@@ -97,11 +97,32 @@ pub fn get_chrome_based_profiles(
                     .map(|s| s.to_owned())
                     .or_else(|| {
                         profile_data
-                            .get("name")
+                            .get("brave_sync_profile_name")
                             .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
                             .map(|s| s.to_owned())
                     })
-                    .unwrap_or_else(|| directory.clone());
+                    .or_else(|| {
+                        profile_data
+                            .get("supervised_user_name")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
+                            .map(|s| s.to_owned())
+                    })
+                    .or_else(|| {
+                        profile_data
+                            .get("name")
+                            .and_then(|v| v.as_str())
+                            .filter(|s| !s.is_empty())
+                            .map(|s| s.to_owned())
+                    })
+                    .unwrap_or_else(|| {
+                        if profile_key.eq_ignore_ascii_case("default") {
+                            "Default".to_string()
+                        } else {
+                            directory.clone()
+                        }
+                    });
 
                 if !profiles.iter().any(|p| p.directory == directory) {
                     profiles.push(ProfileDescriptor {
