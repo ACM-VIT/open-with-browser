@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useUIStore } from './store/uiStore';
+import { useEffect, useState } from 'react';
+import { type UIState, useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
   id: string;
@@ -21,16 +21,24 @@ export default function OpenWithDialog({
   browsers,
   onChoose,
 }: Props) {
-  const storeOpen = useUIStore(s => s.isDialogOpen);
-  const storeSelected = useUIStore(s => s.selectedBrowserId);
-  const setSelectedBrowser = useUIStore(s => s.setSelectedBrowser);
-  const closeDialog = useUIStore(s => s.closeDialog);
+  const storeOpen = useUIStore((s: UIState) => s.isDialogOpen);
+  const storeSelected = useUIStore((s: UIState) => s.selectedBrowserId);
+  const setSelectedBrowser = useUIStore(
+    (s: UIState) => s.setSelectedBrowser
+  );
+  const closeDialog = useUIStore((s: UIState) => s.closeDialog);
 
   const open = openProp ?? storeOpen;
 
   const [selected, setSelected] = useState<string | null>(
     storeSelected ?? browsers[0]?.id ?? null
   );
+
+  useEffect(() => {
+    if (open) {
+      setSelected(storeSelected ?? browsers[0]?.id ?? null);
+    }
+  }, [open, storeSelected, browsers]);
 
   if (!open) return null;
 
@@ -40,18 +48,26 @@ export default function OpenWithDialog({
   };
 
   const handleChoose = (persist: 'just-once' | 'always') => {
-    const b = browsers.find(b => b.id === selected);
-    if (b) {
-      setSelectedBrowser(b.id);
-      onChoose(b, persist);
+    const browser = browsers.find(b => b.id === selected);
+    if (browser) {
+      setSelectedBrowser(browser.id);
+      onChoose(browser, persist);
     }
   };
 
   return (
-    <div className='owd-backdrop'>
-      <div className='owd-dialog' role='dialog' aria-modal='true'>
-        <button aria-label='Close' className='owd-close' onClick={handleClose}>
-          ×
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur'>
+      <div
+        role='dialog'
+        aria-modal='true'
+        className='relative w-[min(420px,calc(100vw-3rem))] rounded-[28px] border border-white/5 bg-zinc-950/90 p-6 shadow-soft'
+      >
+        <button
+          aria-label='Close'
+          className='absolute right-3 top-3 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
+          onClick={handleClose}
+        >
+          Esc
         </button>
 
         <header>

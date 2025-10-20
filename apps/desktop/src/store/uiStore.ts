@@ -12,7 +12,7 @@ export type ProfileEntry = {
   browserId?: string;
 };
 
-type UIState = {
+export type UIState = {
   isDialogOpen: boolean;
   selectedBrowserId: string | null;
   selectedProfileId: string | null;
