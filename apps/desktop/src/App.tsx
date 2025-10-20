@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
 import Settings from './pages/Settings';
-import { ActiveLink, LaunchHistoryItem } from './lib/models';
+import type { BrowserProfile } from './OpenWithDialog';
 import {
   fetchAvailableBrowsers,
   fetchRoutingSnapshot,
@@ -13,16 +13,12 @@ import {
   listenRoutingError,
   resolveIncomingLink,
   fetchProfilesFor,
-  type RoutingStatusWire,
 } from './lib/routing';
-import type { BrowserProfile } from './OpenWithDialog';
 import { fetchPreferences } from './lib/preferences';
 import {
-  DEFAULT_UI_SETTINGS,
   loadUiSettings,
   persistLastSelectedBrowser,
   setUiSetting,
-  type UiSettings,
 } from './lib/storage';
 import { useUIStore } from './store/uiStore';
 import {
@@ -30,31 +26,51 @@ import {
   loadAutostartState,
   setAutostartState,
 } from './lib/autostart';
-
-type PageKey = 'dashboard' | 'rules' | 'settings';
-type StatusMap = Record<string, RoutingStatusWire['status']>;
-type ErrorMap = Record<string, string>;
+import { useAppStore } from './store/appStore';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<PageKey>('dashboard');
-  const [activeLink, setActiveLink] = useState<ActiveLink | null>(null);
-  const [history, setHistory] = useState<LaunchHistoryItem[]>([]);
-  const [statusById, setStatusById] = useState<StatusMap>({});
-  const [errorsById, setErrorsById] = useState<ErrorMap>({});
-  const [ready, setReady] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
-  const [browserCatalog, setBrowserCatalog] = useState<BrowserProfile[]>([]);
-  const [uiSettings, setUiSettings] = useState<UiSettings>(DEFAULT_UI_SETTINGS);
-  const [settingsReady, setSettingsReady] = useState(false);
-  const [hasFallback, setHasFallback] = useState<boolean | null>(null);
-  const [fallbackPromptVisible, setFallbackPromptVisible] = useState(false);
-  const [dismissedFallbackFor, setDismissedFallbackFor] = useState<
-    string | null
-  >(null);
-  const [autostartEnabled, setAutostartEnabled] = useState(false);
-  const [autostartReady, setAutostartReady] = useState(false);
-  const [autostartStatus, setAutostartStatus] = useState<string | null>(null);
-  const [pendingFallbackFocus, setPendingFallbackFocus] = useState(false);
+  const currentPage = useAppStore(state => state.currentPage);
+  const setCurrentPage = useAppStore(state => state.setCurrentPage);
+  const activeLink = useAppStore(state => state.activeLink);
+  const setActiveLink = useAppStore(state => state.setActiveLink);
+  const history = useAppStore(state => state.history);
+  const setHistory = useAppStore(state => state.setHistory);
+  const statusById = useAppStore(state => state.statusById);
+  const setStatusById = useAppStore(state => state.setStatusById);
+  const errorsById = useAppStore(state => state.errorsById);
+  const setErrorsById = useAppStore(state => state.setErrorsById);
+  const ready = useAppStore(state => state.ready);
+  const setReady = useAppStore(state => state.setReady);
+  const initError = useAppStore(state => state.initError);
+  const setInitError = useAppStore(state => state.setInitError);
+  const browserCatalog = useAppStore(state => state.browserCatalog);
+  const setBrowserCatalog = useAppStore(state => state.setBrowserCatalog);
+  const uiSettings = useAppStore(state => state.uiSettings);
+  const setUiSettings = useAppStore(state => state.setUiSettings);
+  const settingsReady = useAppStore(state => state.settingsReady);
+  const setSettingsReady = useAppStore(state => state.setSettingsReady);
+  const hasFallback = useAppStore(state => state.hasFallback);
+  const setHasFallback = useAppStore(state => state.setHasFallback);
+  const fallbackPromptVisible = useAppStore(
+    state => state.fallbackPromptVisible
+  );
+  const setFallbackPromptVisible = useAppStore(
+    state => state.setFallbackPromptVisible
+  );
+  const dismissedFallbackFor = useAppStore(state => state.dismissedFallbackFor);
+  const setDismissedFallbackFor = useAppStore(
+    state => state.setDismissedFallbackFor
+  );
+  const autostartEnabled = useAppStore(state => state.autostartEnabled);
+  const setAutostartEnabled = useAppStore(state => state.setAutostartEnabled);
+  const autostartReady = useAppStore(state => state.autostartReady);
+  const setAutostartReady = useAppStore(state => state.setAutostartReady);
+  const autostartStatus = useAppStore(state => state.autostartStatus);
+  const setAutostartStatus = useAppStore(state => state.setAutostartStatus);
+  const pendingFallbackFocus = useAppStore(state => state.pendingFallbackFocus);
+  const setPendingFallbackFocus = useAppStore(
+    state => state.setPendingFallbackFocus
+  );
   const hasFallbackRef = useRef<boolean | null>(null);
 
   const setDialogSelectedBrowser = useUIStore(
@@ -102,7 +118,12 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [resetDialogSelection, setDialogSelectedBrowser]);
+  }, [
+    resetDialogSelection,
+    setDialogSelectedBrowser,
+    setSettingsReady,
+    setUiSettings,
+  ]);
 
   useEffect(() => {
     if (!isTauriEnvironment()) {
@@ -134,7 +155,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setAutostartEnabled, setAutostartReady, setAutostartStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -160,7 +181,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setHasFallback]);
 
   useEffect(() => {
     let unlisten: Array<() => void> = [];
@@ -229,7 +250,17 @@ export default function App() {
     return () => {
       unlisten.forEach(fn => fn());
     };
-  }, [focusMainWindow]);
+  }, [
+    focusMainWindow,
+    setActiveLink,
+    setErrorsById,
+    setHistory,
+    setInitError,
+    setPendingFallbackFocus,
+    setReady,
+    setStatusById,
+    setFallbackPromptVisible,
+  ]);
 
   useEffect(() => {
     if (activeLink && hasFallback === false) {
@@ -237,14 +268,14 @@ export default function App() {
         setFallbackPromptVisible(true);
       }
     }
-  }, [activeLink, hasFallback, dismissedFallbackFor]);
+  }, [activeLink, hasFallback, dismissedFallbackFor, setFallbackPromptVisible]);
 
   useEffect(() => {
     if (!activeLink) {
       setFallbackPromptVisible(false);
       setPendingFallbackFocus(false);
     }
-  }, [activeLink]);
+  }, [activeLink, setFallbackPromptVisible, setPendingFallbackFocus]);
 
   useEffect(() => {
     hasFallbackRef.current = hasFallback;
@@ -261,7 +292,14 @@ export default function App() {
       setPendingFallbackFocus(false);
       void focusMainWindow();
     }
-  }, [hasFallback, pendingFallbackFocus, focusMainWindow]);
+  }, [
+    hasFallback,
+    pendingFallbackFocus,
+    focusMainWindow,
+    setDismissedFallbackFor,
+    setFallbackPromptVisible,
+    setPendingFallbackFocus,
+  ]);
 
   useEffect(() => {
     if (!activeLink) return;
@@ -350,7 +388,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [setBrowserCatalog]);
 
   useEffect(() => {
     if (!settingsReady) return;
@@ -379,6 +417,7 @@ export default function App() {
     resetDialogSelection,
     settingsReady,
     uiSettings.lastSelectedBrowserId,
+    setUiSettings,
   ]);
 
   const recentHistory = useMemo(() => history.slice(0, 5), [history]);
@@ -404,53 +443,67 @@ export default function App() {
         console.warn('Unable to update remember choice setting', err);
       }
     },
-    [resetDialogSelection]
+    [resetDialogSelection, setUiSettings]
   );
 
-  const handleShowIconsChange = useCallback(async (value: boolean) => {
-    try {
-      await setUiSetting('showIcons', value);
-      setUiSettings(prev => ({
-        ...prev,
-        showIcons: value,
-      }));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('Unable to update show icons setting', err);
-    }
-  }, []);
+  const handleShowIconsChange = useCallback(
+    async (value: boolean) => {
+      try {
+        await setUiSetting('showIcons', value);
+        setUiSettings(prev => ({
+          ...prev,
+          showIcons: value,
+        }));
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to update show icons setting', err);
+      }
+    },
+    [setUiSettings]
+  );
 
-  const handleDebugModeChange = useCallback(async (value: boolean) => {
-    try {
-      await setUiSetting('debugMode', value);
-      setUiSettings(prev => ({
-        ...prev,
-        debugMode: value,
-      }));
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('Unable to update debug mode setting', err);
-    }
-  }, []);
+  const handleDebugModeChange = useCallback(
+    async (value: boolean) => {
+      try {
+        await setUiSetting('debugMode', value);
+        setUiSettings(prev => ({
+          ...prev,
+          debugMode: value,
+        }));
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to update debug mode setting', err);
+      }
+    },
+    [setUiSettings]
+  );
 
-  const handleFallbackChanged = useCallback((value: boolean) => {
-    setHasFallback(value);
-    if (value) {
-      setFallbackPromptVisible(false);
-      setDismissedFallbackFor(null);
-    }
-  }, []);
+  const handleFallbackChanged = useCallback(
+    (value: boolean) => {
+      setHasFallback(value);
+      if (value) {
+        setFallbackPromptVisible(false);
+        setDismissedFallbackFor(null);
+      }
+    },
+    [setDismissedFallbackFor, setFallbackPromptVisible, setHasFallback]
+  );
 
   const handleOpenFallbackSettings = useCallback(() => {
     setCurrentPage('settings');
     setFallbackPromptVisible(false);
     setDismissedFallbackFor(activeLink?.id ?? null);
-  }, [activeLink]);
+  }, [
+    activeLink?.id,
+    setCurrentPage,
+    setDismissedFallbackFor,
+    setFallbackPromptVisible,
+  ]);
 
   const handleDismissFallbackPrompt = useCallback(() => {
     setFallbackPromptVisible(false);
     setDismissedFallbackFor(activeLink?.id ?? null);
-  }, [activeLink]);
+  }, [activeLink?.id, setDismissedFallbackFor, setFallbackPromptVisible]);
 
   const handleAutostartChange = useCallback(
     async (value: boolean) => {
@@ -478,7 +531,7 @@ export default function App() {
         );
       }
     },
-    [autostartEnabled]
+    [autostartEnabled, setAutostartEnabled, setAutostartStatus]
   );
 
   const handleRecordLaunch = async (

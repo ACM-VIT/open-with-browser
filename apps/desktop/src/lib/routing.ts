@@ -189,6 +189,6 @@ export async function fetchAvailableBrowsers() {
 
 export async function fetchProfilesFor(browser: string) {
   return invoke<ProfileDescriptorWire[]>('get_profiles', {
-    browser_kind: browser,
+    browserKind: browser,
   });
 }
