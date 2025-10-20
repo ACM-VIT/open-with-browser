@@ -227,7 +227,7 @@ export default function Layout({
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut', delay: 0.05 }}
-          className='flex-1 overflow-y-auto px-5 py-6 sm:px-6 md:px-8 lg:px-10 lg:py-8'
+          className='flex-1 w-full overflow-y-auto overflow-x-hidden overscroll-y-contain overscroll-x-none scrollbar-stable px-5 py-6 sm:px-6 md:px-8 lg:px-10 lg:py-8'
         >
           {children}
         </motion.main>

@@ -9,12 +9,17 @@
     color-scheme: dark;
   }
 
+  html,
+  body {
+    height: 100%;
+  }
+
   body {
     @apply font-sans bg-zinc-950 text-zinc-100 antialiased;
   }
 
   #root {
-    @apply min-h-screen w-full bg-transparent;
+    @apply flex min-h-full w-full flex-col overflow-hidden bg-transparent;
   }
 }
 
@@ -28,6 +33,12 @@
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.35),
     0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+@layer utilities {
+  .scrollbar-stable {
+    scrollbar-gutter: stable both-edges;
+  }
 }
 
 @layer components {
