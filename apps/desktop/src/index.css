@@ -14,7 +14,7 @@
   }
 
   #root {
-    @apply h-screen w-screen overflow-hidden bg-transparent;
+    @apply min-h-screen w-full bg-transparent;
   }
 }
 
@@ -32,7 +32,7 @@
 
 @layer components {
   .panel {
-    @apply rounded-[26px] border border-white/5 bg-zinc-950/70 p-6 shadow-soft;
+    @apply rounded-[22px] border border-white/5 bg-zinc-950/70 p-5 shadow-soft sm:rounded-[26px] sm:p-6;
   }
 
   .panel-title {
