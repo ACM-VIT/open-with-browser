@@ -3,6 +3,7 @@ use crate::{
         get_browsers, get_chrome_profiles, get_firefox_profiles, parse_browser_kind, Browsers,
         ProfileDescriptor,
     },
+    diagnostics::{DiagnosticEntry, DiagnosticsState},
     platform,
     preferences::{FallbackPreference, PreferencesState, ProfilePreference},
     routing::{
@@ -11,7 +12,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_os::OsType;
 
 fn map_error(err: Box<dyn std::error::Error>) -> String {
@@ -252,4 +253,27 @@ pub async fn set_fallback_browser(
         }
         _ => state.set_fallback(&app_handle, None).await,
     }
+}
+
+#[tauri::command]
+pub fn get_diagnostics(state: State<DiagnosticsState>) -> Vec<DiagnosticEntry> {
+    let mut entries = state.snapshot();
+    entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+    entries
+}
+
+#[tauri::command]
+pub fn clear_diagnostics(state: State<DiagnosticsState>) {
+    state.clear();
+}
+
+#[tauri::command]
+pub fn export_diagnostics(state: State<DiagnosticsState>) -> Result<String, String> {
+    let entries = state.snapshot();
+    let contents = entries
+        .into_iter()
+        .map(|entry| format!("[{}] {}", entry.timestamp, entry.message))
+        .collect::<Vec<_>>()
+        .join("\n");
+    Ok(contents)
 }

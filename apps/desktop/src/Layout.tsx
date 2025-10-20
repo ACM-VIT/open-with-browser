@@ -34,20 +34,15 @@ export default function Layout({
   };
 
   const navPanelContent = (
-    <div className='flex h-full flex-col border-white/5 bg-zinc-950/90 px-5 py-6 backdrop-blur-lg sm:px-6 lg:px-6 lg:py-8'>
-      <div className='flex items-center gap-3 rounded-[26px] border border-white/5 bg-black/30 px-4 py-4 shadow-soft-sm'>
-        <div className='flex h-12 w-12 items-center justify-center rounded-[20px] bg-zinc-900 text-xl font-semibold text-amber-400 shadow-soft-sm'>
-          ⌘
-        </div>
-        <div className='space-y-1'>
-          <p className='text-xs uppercase tracking-[0.35em] text-zinc-500'>
-            Open With
-          </p>
-          <p className='text-lg font-semibold text-zinc-100'>Browser Studio</p>
-        </div>
-      </div>
+    <div className='flex h-full flex-col gap-8 border-white/5 bg-zinc-950/90 px-5 py-6 backdrop-blur-lg sm:px-6 lg:px-6 lg:py-8'>
+      <header className='space-y-1'>
+        <p className='text-[11px] uppercase tracking-[0.32em] text-zinc-500'>
+          Open With Browser
+        </p>
+        <p className='text-lg font-semibold text-zinc-100'>Desktop</p>
+      </header>
 
-      <nav className='mt-10 space-y-2'>
+      <nav className='space-y-2'>
         {navItems.map(item => {
           const isActive = currentPage === item.id;
           return (
@@ -69,45 +64,21 @@ export default function Layout({
         })}
       </nav>
 
-      <div className='mt-auto rounded-[24px] border border-white/5 bg-black/25 p-5 shadow-soft-sm'>
-        <p className='text-xs uppercase tracking-[0.32em] text-zinc-500'>
-          Current hand-off
-        </p>
-        {activeLink ? (
-          <div className='mt-4 space-y-3 text-sm text-zinc-300'>
-            <div>
-              <p className='text-xs text-zinc-500'>Source app</p>
-              <p className='mt-1 font-semibold text-zinc-100'>
-                {activeLink.sourceApp}
-              </p>
-              <p className='text-xs text-zinc-500'>
-                {activeLink.sourceContext}
-              </p>
-            </div>
-            <div>
-              <p className='text-xs text-zinc-500'>Contact</p>
-              <p className='mt-1 text-sm font-medium text-zinc-100'>
-                {activeLink.contactName}
-              </p>
-            </div>
-            {activeLink.recommendedBrowser ? (
-              <div className='rounded-[18px] border border-white/5 bg-black/30 px-3 py-2 text-xs text-zinc-400'>
-                Recommended:{' '}
-                <span className='font-semibold text-emerald-200'>
-                  {activeLink.recommendedBrowser.name}
-                  {activeLink.recommendedBrowser.profileLabel
-                    ? ` · ${activeLink.recommendedBrowser.profileLabel}`
-                    : ''}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <p className='mt-4 text-sm text-zinc-500'>
-            Waiting for the next link hand-off.
+      {activeLink ? (
+        <div className='mt-auto space-y-2 rounded-[20px] border border-white/5 bg-black/25 p-4 shadow-soft-sm'>
+          <p className='text-[11px] uppercase tracking-[0.32em] text-zinc-500'>
+            Active link
           </p>
-        )}
-      </div>
+          <div className='space-y-2 text-sm text-zinc-300'>
+            <p className='font-semibold text-zinc-100 truncate'>
+              {activeLink.url.replace(/^https?:\/\//, '')}
+            </p>
+            <p className='text-xs text-zinc-500'>
+              {activeLink.contactName} • {activeLink.sourceApp}
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -185,42 +156,29 @@ export default function Layout({
             ) : null}
           </div>
 
-          <div className='w-full lg:w-auto'>
-            <p className='text-xs uppercase tracking-[0.35em] text-zinc-500'>
+          <div className='flex w-full flex-col gap-1'>
+            <p className='text-[11px] uppercase tracking-[0.32em] text-zinc-500'>
               {activeNavLabel}
             </p>
-            <h1 className='mt-2 text-2xl font-semibold text-zinc-100'>
-              Open chat links without leaving your flow
+            <h1 className='text-xl font-semibold text-zinc-100'>
+              {activeNavLabel}
             </h1>
-            <p className='mt-1 text-sm text-zinc-400'>
-              Preview the incoming context, confirm the browser, and hand off in
-              the background.
-            </p>
           </div>
 
           {activeLink ? (
-            <div className='hidden items-center gap-3 rounded-[22px] border border-white/5 bg-black/30 px-4 py-3 shadow-soft-sm lg:flex'>
-              <div className='flex flex-col text-right'>
-                <span className='text-xs font-semibold text-zinc-200'>
-                  {activeLink.contactName}
-                </span>
-                <span className='text-[11px] text-zinc-500'>
-                  {activeLink.sourceApp} •{' '}
-                  {new Date(activeLink.arrivedAt).toLocaleTimeString(
-                    undefined,
-                    {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }
-                  )}
-                </span>
-              </div>
+            <div className='hidden flex-col items-end text-right lg:flex'>
+              <span className='text-xs font-semibold text-zinc-200'>
+                {activeLink.contactName}
+              </span>
+              <span className='text-[11px] text-zinc-500'>
+                {activeLink.sourceApp} •{' '}
+                {new Date(activeLink.arrivedAt).toLocaleTimeString(undefined, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
             </div>
-          ) : (
-            <div className='hidden rounded-[22px] border border-white/10 bg-black/30 px-4 py-3 text-xs text-zinc-400 shadow-soft-sm lg:flex'>
-              No active link
-            </div>
-          )}
+          ) : null}
         </motion.header>
 
         <motion.main

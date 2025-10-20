@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
@@ -16,6 +16,7 @@ import {
   type RoutingStatusWire,
 } from './lib/routing';
 import type { BrowserProfile } from './OpenWithDialog';
+import { fetchPreferences } from './lib/preferences';
 import {
   DEFAULT_UI_SETTINGS,
   loadUiSettings,
@@ -24,6 +25,11 @@ import {
   type UiSettings,
 } from './lib/storage';
 import { useUIStore } from './store/uiStore';
+import {
+  isTauriEnvironment,
+  loadAutostartState,
+  setAutostartState,
+} from './lib/autostart';
 
 type PageKey = 'dashboard' | 'rules' | 'settings';
 type StatusMap = Record<string, RoutingStatusWire['status']>;
@@ -40,11 +46,35 @@ export default function App() {
   const [browserCatalog, setBrowserCatalog] = useState<BrowserProfile[]>([]);
   const [uiSettings, setUiSettings] = useState<UiSettings>(DEFAULT_UI_SETTINGS);
   const [settingsReady, setSettingsReady] = useState(false);
+  const [hasFallback, setHasFallback] = useState<boolean | null>(null);
+  const [fallbackPromptVisible, setFallbackPromptVisible] = useState(false);
+  const [dismissedFallbackFor, setDismissedFallbackFor] = useState<
+    string | null
+  >(null);
+  const [autostartEnabled, setAutostartEnabled] = useState(false);
+  const [autostartReady, setAutostartReady] = useState(false);
+  const [autostartStatus, setAutostartStatus] = useState<string | null>(null);
+  const [pendingFallbackFocus, setPendingFallbackFocus] = useState(false);
+  const hasFallbackRef = useRef<boolean | null>(null);
 
   const setDialogSelectedBrowser = useUIStore(
     state => state.setSelectedBrowser
   );
   const resetDialogSelection = useUIStore(state => state.resetSelection);
+
+  const focusMainWindow = useCallback(async () => {
+    if (!isTauriEnvironment()) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const windowRef = getCurrentWindow();
+      await windowRef.show();
+      await windowRef.unminimize();
+      await windowRef.setFocus();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to focus main window', err);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +105,64 @@ export default function App() {
   }, [resetDialogSelection, setDialogSelectedBrowser]);
 
   useEffect(() => {
+    if (!isTauriEnvironment()) {
+      setAutostartReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const enabled = await loadAutostartState();
+        if (!cancelled) {
+          setAutostartEnabled(enabled);
+          setAutostartReady(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAutostartReady(true);
+          setAutostartStatus(
+            err instanceof Error
+              ? `Unable to read autostart preference: ${err.message}`
+              : 'Unable to read autostart preference.'
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const snapshot = await fetchPreferences();
+        if (!cancelled) {
+          const hasValue = Boolean(snapshot.fallback);
+          hasFallbackRef.current = hasValue;
+          setHasFallback(hasValue);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setHasFallback(null);
+          hasFallbackRef.current = null;
+          // eslint-disable-next-line no-console
+          console.warn('Unable to read fallback preference', err);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     let unlisten: Array<() => void> = [];
 
     const setup = async () => {
@@ -86,6 +174,14 @@ export default function App() {
 
         const removeIncoming = await listenIncomingLink(link => {
           setActiveLink(link);
+          if (hasFallbackRef.current === false) {
+            setFallbackPromptVisible(true);
+            void focusMainWindow();
+          } else if (hasFallbackRef.current === null) {
+            setPendingFallbackFocus(true);
+            setFallbackPromptVisible(true);
+            void focusMainWindow();
+          }
         });
         const removeDecision = await listenLaunchDecision(decision => {
           setHistory(prev => [
@@ -133,7 +229,51 @@ export default function App() {
     return () => {
       unlisten.forEach(fn => fn());
     };
-  }, []);
+  }, [focusMainWindow]);
+
+  useEffect(() => {
+    if (activeLink && hasFallback === false) {
+      if (dismissedFallbackFor !== activeLink.id) {
+        setFallbackPromptVisible(true);
+      }
+    }
+  }, [activeLink, hasFallback, dismissedFallbackFor]);
+
+  useEffect(() => {
+    if (!activeLink) {
+      setFallbackPromptVisible(false);
+      setPendingFallbackFocus(false);
+    }
+  }, [activeLink]);
+
+  useEffect(() => {
+    hasFallbackRef.current = hasFallback;
+
+    if (hasFallback) {
+      setFallbackPromptVisible(false);
+      setDismissedFallbackFor(null);
+      setPendingFallbackFocus(false);
+      return;
+    }
+
+    if (hasFallback === false && pendingFallbackFocus) {
+      setFallbackPromptVisible(true);
+      setPendingFallbackFocus(false);
+      void focusMainWindow();
+    }
+  }, [hasFallback, pendingFallbackFocus, focusMainWindow]);
+
+  useEffect(() => {
+    if (!activeLink) return;
+    if (hasFallback === false) {
+      void focusMainWindow();
+    }
+  }, [activeLink, hasFallback, focusMainWindow]);
+
+  useEffect(() => {
+    if (!fallbackPromptVisible) return;
+    void focusMainWindow();
+  }, [fallbackPromptVisible, focusMainWindow]);
 
   useEffect(() => {
     let cancelled = false;
@@ -234,7 +374,12 @@ export default function App() {
         });
       }
     }
-  }, [browserCatalog, resetDialogSelection, settingsReady, uiSettings.lastSelectedBrowserId]);
+  }, [
+    browserCatalog,
+    resetDialogSelection,
+    settingsReady,
+    uiSettings.lastSelectedBrowserId,
+  ]);
 
   const recentHistory = useMemo(() => history.slice(0, 5), [history]);
 
@@ -287,6 +432,54 @@ export default function App() {
       console.warn('Unable to update debug mode setting', err);
     }
   }, []);
+
+  const handleFallbackChanged = useCallback((value: boolean) => {
+    setHasFallback(value);
+    if (value) {
+      setFallbackPromptVisible(false);
+      setDismissedFallbackFor(null);
+    }
+  }, []);
+
+  const handleOpenFallbackSettings = useCallback(() => {
+    setCurrentPage('settings');
+    setFallbackPromptVisible(false);
+    setDismissedFallbackFor(activeLink?.id ?? null);
+  }, [activeLink]);
+
+  const handleDismissFallbackPrompt = useCallback(() => {
+    setFallbackPromptVisible(false);
+    setDismissedFallbackFor(activeLink?.id ?? null);
+  }, [activeLink]);
+
+  const handleAutostartChange = useCallback(
+    async (value: boolean) => {
+      if (value === autostartEnabled) return;
+
+      if (!isTauriEnvironment()) {
+        setAutostartEnabled(value);
+        setAutostartStatus(null);
+        return;
+      }
+
+      try {
+        await setAutostartState(value);
+        setAutostartEnabled(value);
+        setAutostartStatus(
+          value
+            ? 'App will start automatically at login.'
+            : 'Autostart disabled.'
+        );
+      } catch (err) {
+        setAutostartStatus(
+          err instanceof Error
+            ? `Failed to update autostart: ${err.message}`
+            : 'Failed to update autostart setting.'
+        );
+      }
+    },
+    [autostartEnabled]
+  );
 
   const handleRecordLaunch = async (
     browser: BrowserProfile,
@@ -346,6 +539,9 @@ export default function App() {
             errorsById={errorsById}
             onRecordLaunch={handleRecordLaunch}
             showIcons={uiSettings.showIcons}
+            needsFallbackPrompt={fallbackPromptVisible}
+            onOpenFallbackSettings={handleOpenFallbackSettings}
+            onDismissFallbackPrompt={handleDismissFallbackPrompt}
           />
         );
       case 'rules':
@@ -359,6 +555,12 @@ export default function App() {
             onRememberChoiceChange={handleRememberChoiceChange}
             onShowIconsChange={handleShowIconsChange}
             onDebugModeChange={handleDebugModeChange}
+            hasFallback={hasFallback}
+            onFallbackChanged={handleFallbackChanged}
+            autostartEnabled={autostartEnabled}
+            autostartReady={autostartReady}
+            autostartStatus={autostartStatus}
+            onAutostartChange={handleAutostartChange}
           />
         );
       default:
@@ -371,6 +573,9 @@ export default function App() {
             errorsById={errorsById}
             onRecordLaunch={handleRecordLaunch}
             showIcons={uiSettings.showIcons}
+            needsFallbackPrompt={fallbackPromptVisible}
+            onOpenFallbackSettings={handleOpenFallbackSettings}
+            onDismissFallbackPrompt={handleDismissFallbackPrompt}
           />
         );
     }
@@ -392,7 +597,7 @@ export default function App() {
         )
       ) : (
         <div className='flex h-full items-center justify-center text-sm text-zinc-500'>
-          Initialising routing service…
+          Initializing routing service…
         </div>
       )}
     </Layout>

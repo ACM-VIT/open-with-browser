@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import {
   arch as osArch,
   family as osFamily,
@@ -17,6 +18,13 @@ import {
   updateFallbackPreference,
   type FallbackPreference,
 } from '../lib/preferences';
+import {
+  clearDiagnostics,
+  exportDiagnostics,
+  fetchDiagnostics,
+  type DiagnosticEntry,
+} from '../lib/diagnostics';
+import { Select } from '../components/ui/Select';
 
 type SettingsProps = {
   rememberChoice: boolean;
@@ -25,6 +33,12 @@ type SettingsProps = {
   onRememberChoiceChange: (value: boolean) => Promise<void> | void;
   onShowIconsChange: (value: boolean) => Promise<void> | void;
   onDebugModeChange: (value: boolean) => Promise<void> | void;
+  hasFallback: boolean | null;
+  onFallbackChanged: (hasFallback: boolean) => void;
+  autostartEnabled: boolean;
+  autostartReady: boolean;
+  autostartStatus: string | null;
+  onAutostartChange: (value: boolean) => Promise<void> | void;
 };
 
 export default function Settings({
@@ -34,14 +48,28 @@ export default function Settings({
   onRememberChoiceChange,
   onShowIconsChange,
   onDebugModeChange,
+  hasFallback,
+  onFallbackChanged,
+  autostartEnabled,
+  autostartReady,
+  autostartStatus,
+  onAutostartChange,
 }: SettingsProps) {
   const [availableBrowsers, setAvailableBrowsers] = useState<string[]>([]);
-  const [availableProfiles, setAvailableProfiles] = useState<ProfileDescriptorWire[]>([]);
+  const [availableProfiles, setAvailableProfiles] = useState<
+    ProfileDescriptorWire[]
+  >([]);
   const [fallbackBrowser, setFallbackBrowser] = useState<string>('');
-  const [fallbackProfileDirectory, setFallbackProfileDirectory] = useState<string>('');
+  const [fallbackProfileDirectory, setFallbackProfileDirectory] =
+    useState<string>('');
   const [fallbackProfileLabel, setFallbackProfileLabel] = useState<string>('');
   const [savingFallback, setSavingFallback] = useState(false);
   const [fallbackStatus, setFallbackStatus] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>([]);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(true);
+  const [diagnosticsStatus, setDiagnosticsStatus] = useState<string | null>(
+    null
+  );
   const [defaultStatus, setDefaultStatus] = useState<
     'checking' | 'default' | 'not-default' | 'error'
   >('checking');
@@ -53,6 +81,25 @@ export default function Settings({
     arch: ReturnType<typeof osArch>;
     version: string;
   } | null>(null);
+
+  const browserSelectOptions = useMemo(
+    () => [
+      { value: '', label: 'Ask each time' },
+      ...availableBrowsers.map(browser => ({ value: browser, label: browser })),
+    ],
+    [availableBrowsers]
+  );
+
+  const profileSelectOptions = useMemo(
+    () => [
+      { value: '', label: 'No specific profile' },
+      ...availableProfiles.map(profile => ({
+        value: profile.directory,
+        label: profile.display_name || profile.directory,
+      })),
+    ],
+    [availableProfiles]
+  );
 
   useEffect(() => {
     refreshDefaultStatus();
@@ -70,6 +117,50 @@ export default function Settings({
       console.warn('Unable to read system metadata', err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
+
+    (async () => {
+      try {
+        const snapshot = await fetchDiagnostics();
+        if (!cancelled) {
+          setDiagnostics(snapshot);
+          setDiagnosticsLoading(false);
+        }
+        unlisten = await listen<DiagnosticEntry>(
+          'diagnostics://entry',
+          event => {
+            setDiagnostics(prev => {
+              const filtered = prev.filter(
+                entry => entry.id != event.payload.id
+              );
+              const next = [event.payload, ...filtered];
+              return next.slice(0, 500);
+            });
+            setDiagnosticsLoading(false);
+          }
+        );
+      } catch (err) {
+        if (!cancelled) {
+          setDiagnosticsLoading(false);
+          setDiagnosticsStatus(
+            err instanceof Error
+              ? `Unable to load diagnostics: ${err.message}`
+              : 'Unable to load diagnostics.'
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unlisten) {
+        void unlisten();
+      }
+    };
   }, []);
 
   const defaultStatusLabel = useMemo(() => {
@@ -130,6 +221,12 @@ export default function Settings({
       const snapshot = await fetchPreferences();
       if (snapshot.fallback) {
         applyFallback(snapshot.fallback, browserList);
+        onFallbackChanged(true);
+      } else {
+        setFallbackBrowser('');
+        setFallbackProfileDirectory('');
+        setFallbackProfileLabel('');
+        onFallbackChanged(false);
       }
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -153,7 +250,11 @@ export default function Settings({
       );
     }
 
-    void loadProfilesForBrowser(fallback.browser, profileDirectory, profileLabel);
+    void loadProfilesForBrowser(
+      fallback.browser,
+      profileDirectory,
+      profileLabel
+    );
   }
 
   async function loadProfilesForBrowser(
@@ -221,7 +322,9 @@ export default function Settings({
 
   function handleFallbackProfileChange(value: string) {
     setFallbackProfileDirectory(value);
-    const match = availableProfiles.find(profile => profile.directory === value);
+    const match = availableProfiles.find(
+      profile => profile.directory === value
+    );
     setFallbackProfileLabel(match?.display_name ?? value);
     setFallbackStatus(null);
   }
@@ -235,13 +338,13 @@ export default function Settings({
         profile: fallbackBrowser
           ? fallbackProfileDirectory
             ? {
-                label:
-                  fallbackProfileLabel || fallbackProfileDirectory || null,
+                label: fallbackProfileLabel || fallbackProfileDirectory || null,
                 directory: fallbackProfileDirectory,
               }
             : null
           : null,
       });
+      onFallbackChanged(Boolean(fallbackBrowser));
       setFallbackStatus(
         fallbackBrowser
           ? `Links without a rule will open in ${fallbackBrowser}${fallbackProfileLabel ? ` · ${fallbackProfileLabel}` : ''}.`
@@ -255,6 +358,45 @@ export default function Settings({
       );
     } finally {
       setSavingFallback(false);
+    }
+  }
+
+  async function handleExportDiagnostics() {
+    try {
+      const payload = await exportDiagnostics();
+      const nav =
+        typeof globalThis.navigator !== 'undefined'
+          ? globalThis.navigator
+          : null;
+      if (nav?.clipboard) {
+        await nav.clipboard.writeText(payload ?? '');
+        setDiagnosticsStatus('Diagnostics copied to clipboard.');
+      } else {
+        setDiagnosticsStatus(
+          'Clipboard unavailable. Select and copy from the list.'
+        );
+      }
+    } catch (err) {
+      setDiagnosticsStatus(
+        err instanceof Error
+          ? `Failed to export diagnostics: ${err.message}`
+          : 'Failed to export diagnostics.'
+      );
+    }
+  }
+
+  async function handleClearDiagnostics() {
+    try {
+      await clearDiagnostics();
+      setDiagnostics([]);
+      setDiagnosticsLoading(false);
+      setDiagnosticsStatus('Diagnostics cleared.');
+    } catch (err) {
+      setDiagnosticsStatus(
+        err instanceof Error
+          ? `Failed to clear diagnostics: ${err.message}`
+          : 'Failed to clear diagnostics.'
+      );
     }
   }
 
@@ -324,21 +466,6 @@ export default function Settings({
       </section>
 
       <section className='panel'>
-        <div className='flex flex-wrap items-start justify-between gap-6'>
-          <div>
-            <h2 className='text-2xl font-semibold text-zinc-50'>Experience</h2>
-            <p className='mt-2 max-w-2xl text-sm text-zinc-400'>
-              Personalize how the desktop shell surfaces asynchronous launches
-              and how link hand-offs should behave by default.
-            </p>
-          </div>
-          <button className='rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-soft-sm transition hover:border-emerald-400/40 hover:text-emerald-200'>
-            Restore defaults
-          </button>
-        </div>
-      </section>
-
-      <section className='panel'>
         <h3 className='panel-title'>General settings</h3>
         <div className='mt-4 space-y-3'>
           <label className='flex items-center justify-between gap-4 rounded-[18px] border border-white/5 bg-black/30 px-4 py-3 shadow-soft-sm transition hover:border-emerald-400/30'>
@@ -375,47 +502,57 @@ export default function Settings({
               className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-amber-400'
             />
           </label>
+
+          <label className='flex items-center justify-between gap-4 rounded-[18px] border border-white/5 bg-black/30 px-4 py-3 shadow-soft-sm transition hover:border-emerald-400/30'>
+            <div>
+              <p className='text-sm font-semibold text-zinc-100'>
+                Start app at login
+              </p>
+              <p className='text-xs text-zinc-500'>
+                Launch Open With Browser automatically when you sign in.
+              </p>
+            </div>
+            <input
+              type='checkbox'
+              checked={autostartEnabled}
+              onChange={e => void onAutostartChange(e.target.checked)}
+              disabled={!autostartReady}
+              className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-emerald-400 disabled:cursor-not-allowed disabled:opacity-60'
+            />
+          </label>
+          {autostartStatus ? (
+            <p className='pl-1 text-xs text-zinc-500'>{autostartStatus}</p>
+          ) : null}
         </div>
       </section>
 
       <section className='panel'>
         <h3 className='panel-title'>Browser orchestration</h3>
         <div className='mt-4 space-y-3'>
-          <label className='flex flex-col gap-2 text-sm text-zinc-300'>
-            Default browser for unmatched links
-            <select
+          {hasFallback === false ? (
+            <div className='rounded-[16px] border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 shadow-soft-sm'>
+              Set a fallback so unmatched links open automatically.
+            </div>
+          ) : null}
+          <div className='flex flex-col gap-2 text-sm text-zinc-300'>
+            <span>Default browser for unmatched links</span>
+            <Select
+              options={browserSelectOptions}
               value={fallbackBrowser}
-              onChange={e => void handleFallbackBrowserChange(e.target.value)}
-              className='rounded-[16px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-            >
-              <option value=''>Ask each time</option>
-              {availableBrowsers.map(browser => (
-                <option key={browser} value={browser}>
-                  {browser}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={value => void handleFallbackBrowserChange(value)}
+            />
+          </div>
 
           {fallbackBrowser ? (
-            <label className='flex flex-col gap-2 text-sm text-zinc-300'>
-              Default profile (optional)
-              <select
+            <div className='flex flex-col gap-2 text-sm text-zinc-300'>
+              <span>Default profile (optional)</span>
+              <Select
+                options={profileSelectOptions}
                 value={fallbackProfileDirectory}
-                onChange={e => handleFallbackProfileChange(e.target.value)}
-                className='rounded-[16px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-              >
-                <option value=''>No specific profile</option>
-                {availableProfiles.map(profile => (
-                  <option
-                    key={profile.directory}
-                    value={profile.directory}
-                  >
-                    {profile.display_name || profile.directory}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={value => handleFallbackProfileChange(value)}
+                disabled={availableProfiles.length === 0}
+              />
+            </div>
           ) : null}
 
           <div className='flex items-center gap-3'>
@@ -434,7 +571,25 @@ export default function Settings({
       </section>
 
       <section className='panel'>
-        <h3 className='panel-title'>Diagnostics</h3>
+        <div className='flex flex-wrap items-center justify-between gap-3'>
+          <h3 className='panel-title'>Diagnostics</h3>
+          <div className='flex gap-2'>
+            <button
+              onClick={handleExportDiagnostics}
+              disabled={diagnosticsLoading}
+              className='rounded-[16px] border border-white/10 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-emerald-400/40 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-60'
+            >
+              Copy log
+            </button>
+            <button
+              onClick={handleClearDiagnostics}
+              disabled={diagnosticsLoading || diagnostics.length === 0}
+              className='rounded-[16px] border border-white/10 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-red-400/40 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60'
+            >
+              Clear log
+            </button>
+          </div>
+        </div>
         <div className='mt-4 space-y-3'>
           <label className='flex items-center justify-between gap-4 rounded-[18px] border border-white/5 bg-black/30 px-4 py-3 shadow-soft-sm transition hover:border-red-400/40'>
             <div>
@@ -442,8 +597,7 @@ export default function Settings({
                 Enable debug timeline
               </p>
               <p className='text-xs text-zinc-500'>
-                Emit verbose logs for each asynchronous step. Use sparingly in
-                production environments.
+                Capture extra routing steps for troubleshooting.
               </p>
             </div>
             <input
@@ -453,9 +607,32 @@ export default function Settings({
               className='h-5 w-5 rounded border border-white/10 bg-black/50 accent-red-400'
             />
           </label>
-          <button className='w-full rounded-[18px] border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold text-zinc-300 shadow-soft-sm transition hover:border-red-400/40 hover:text-red-200'>
-            Export diagnostics
-          </button>
+          {diagnosticsStatus ? (
+            <p className='text-xs text-zinc-400'>{diagnosticsStatus}</p>
+          ) : null}
+          <div className='max-h-60 space-y-2 overflow-auto rounded-[18px] border border-white/5 bg-black/25 p-3 shadow-soft-sm'>
+            {diagnosticsLoading ? (
+              <p className='text-xs text-zinc-500'>Loading diagnostics…</p>
+            ) : diagnostics.length === 0 ? (
+              <p className='text-xs text-zinc-500'>
+                No diagnostic entries yet.
+              </p>
+            ) : (
+              diagnostics.map(entry => (
+                <div
+                  key={entry.id}
+                  className='rounded-[14px] border border-white/5 bg-black/30 px-3 py-2 text-xs text-zinc-300'
+                >
+                  <p className='font-medium text-zinc-200'>
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </p>
+                  <p className='mt-1 text-[11px] leading-relaxed text-zinc-400'>
+                    {entry.message}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
     </div>

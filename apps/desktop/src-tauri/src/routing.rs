@@ -590,10 +590,15 @@ fn browser_user_data_dir(browser_name: &str) -> Option<PathBuf> {
     }
 }
 
-fn append_log(_app: &tauri::AppHandle, message: &str) {
-    let timestamp = Utc::now().to_rfc3339();
-    let entry = format!("[{timestamp}] {message}\n");
-    print!("{entry}");
+fn append_log(app: &tauri::AppHandle, message: &str) {
+    if let Some(store) = app.try_state::<crate::diagnostics::DiagnosticsState>() {
+        let entry = store.record(message.to_string());
+        let _ = app.emit("diagnostics://entry", entry.clone());
+        print!("[{}] {}\n", entry.timestamp, entry.message);
+    } else {
+        let timestamp = Utc::now().to_rfc3339();
+        print!("[{timestamp}] {message}\n");
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -660,11 +665,7 @@ pub async fn simulate_link_payload(payload: Option<SimulatedLinkPayload>) -> Inc
         preview: data
             .preview
             .or_else(|| Some("Shared link detected.".to_string())),
-        recommended_browser: Some(BrowserDescriptor {
-            name: "Arc".to_string(),
-            profile_label: Some("Workspace".to_string()),
-            profile_directory: None,
-        }),
+        recommended_browser: None,
         arrived_at: Some(current_timestamp()),
     }
 }

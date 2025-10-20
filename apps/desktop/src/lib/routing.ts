@@ -57,13 +57,14 @@ export function mapIncomingLink(
   wire: IncomingLinkWire | null
 ): ActiveLink | null {
   if (!wire) return null;
-  const recommendedBrowser: BrowserSelection | undefined = wire.recommended_browser
-    ? {
-        name: wire.recommended_browser.name,
-        profileLabel: wire.recommended_browser.profile_label ?? null,
-        profileDirectory: wire.recommended_browser.profile_directory ?? null,
-      }
-    : undefined;
+  const recommendedBrowser: BrowserSelection | undefined =
+    wire.recommended_browser
+      ? {
+          name: wire.recommended_browser.name,
+          profileLabel: wire.recommended_browser.profile_label ?? null,
+          profileDirectory: wire.recommended_browser.profile_directory ?? null,
+        }
+      : undefined;
   return {
     id: wire.id,
     url: wire.url,

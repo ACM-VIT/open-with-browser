@@ -1,3 +1,5 @@
+/* global HTMLInputElement, HTMLFormElement */
+
 import {
   ChangeEvent,
   FormEvent,
@@ -16,6 +18,7 @@ import {
   type RulePolicy,
 } from '../lib/storage';
 import { simulateIncomingLink } from '../lib/routing';
+import { Combobox, Select } from '../components/ui/Select';
 
 type RulesProps = {
   availableBrowsers: BrowserProfile[];
@@ -25,8 +28,9 @@ const POLICY_OPTIONS: RulePolicy[] = ['Always', 'Just once', 'Fallback'];
 const LATENCY_OPTIONS = ['< 100 ms', 'Stable', 'Auto'];
 
 const createId = () =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
+  typeof globalThis.crypto !== 'undefined' &&
+  typeof globalThis.crypto.randomUUID === 'function'
+    ? globalThis.crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
 const formatBrowserLabel = (browser: BrowserProfile) =>
@@ -104,6 +108,34 @@ export default function Rules({ availableBrowsers }: RulesProps) {
         browser,
       })),
     [availableBrowsers]
+  );
+
+  const comboboxOptions = useMemo(
+    () =>
+      browserOptions.map(option => ({
+        value: option.id,
+        label: option.label,
+        badge: option.browser.profileDirectory ?? null,
+      })),
+    [browserOptions]
+  );
+
+  const policySelectOptions = useMemo(
+    () =>
+      POLICY_OPTIONS.map(option => ({
+        value: option,
+        label: option,
+      })),
+    []
+  );
+
+  const latencySelectOptions = useMemo(
+    () =>
+      LATENCY_OPTIONS.map(option => ({
+        value: option,
+        label: option,
+      })),
+    []
   );
 
   const resolveBrowserSelection = (value: string) => {
@@ -221,10 +253,9 @@ export default function Rules({ availableBrowsers }: RulesProps) {
       return;
     }
 
-    const extension =
-      fileForm.extension.startsWith('.')
-        ? fileForm.extension.trim().toLowerCase()
-        : `.${fileForm.extension.trim().toLowerCase()}`;
+    const extension = fileForm.extension.startsWith('.')
+      ? fileForm.extension.trim().toLowerCase()
+      : `.${fileForm.extension.trim().toLowerCase()}`;
 
     const selection = resolveBrowserSelection(fileForm.browser);
 
@@ -371,7 +402,13 @@ export default function Rules({ availableBrowsers }: RulesProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
+    const FileReaderCtor = globalThis.FileReader;
+    if (!FileReaderCtor) {
+      setError('FileReader API is unavailable in this environment.');
+      return;
+    }
+
+    const reader = new FileReaderCtor();
     reader.onload = async () => {
       const previous = domainRules;
       try {
@@ -456,22 +493,15 @@ export default function Rules({ availableBrowsers }: RulesProps) {
             <h2 className='text-2xl font-semibold text-zinc-50'>
               Routing rules
             </h2>
-            <p className='mt-2 max-w-2xl text-sm text-zinc-400'>
-              Describe how domains and file types map to browser profiles. These
-              rules power the asynchronous hand-off without blocking the desktop
-              shell.
-            </p>
           </div>
           <button
             className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70'
             onClick={() => setAddingDomain(true)}
           >
-            New domain rule
+            Add domain rule
           </button>
         </div>
-        {error ? (
-          <p className='mt-4 text-sm text-red-300'>{error}</p>
-        ) : null}
+        {error ? <p className='mt-4 text-sm text-red-300'>{error}</p> : null}
         {loading ? (
           <p className='mt-4 text-sm text-zinc-400'>Loading rules…</p>
         ) : null}
@@ -479,14 +509,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
 
       <section className='panel'>
         <header className='flex flex-wrap items-center justify-between gap-4'>
-          <div>
-            <h3 className='panel-title'>Domain policies</h3>
-            <p className='panel-subtitle mt-1 max-w-2xl'>
-              Control which browser profile is selected when a link matches a
-              domain. The asynchronous worker resolves these rules before the
-              dialog renders.
-            </p>
-          </div>
+          <h3 className='panel-title'>Domain rules</h3>
           <button
             className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
             onClick={handleCsvClick}
@@ -515,59 +538,46 @@ export default function Rules({ availableBrowsers }: RulesProps) {
                 placeholder='example.com'
               />
             </label>
-            <label className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-1'>
-              Browser profile
-              <input
-                list='browser-options'
+            <div className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-1'>
+              <span>Browser profile</span>
+              <Combobox
+                options={comboboxOptions}
                 value={domainForm.browser}
-                onChange={event =>
+                onChange={next =>
                   setDomainForm(form => ({
                     ...form,
-                    browser: event.target.value,
+                    browser: next,
                   }))
                 }
-                className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-                placeholder='Arc · Workspace'
+                placeholder='Search browsers'
               />
-            </label>
-            <label className='flex flex-col gap-1 text-xs text-zinc-400'>
-              Policy
-              <select
+            </div>
+            <div className='flex flex-col gap-1 text-xs text-zinc-400'>
+              <span>Policy</span>
+              <Select
+                options={policySelectOptions}
                 value={domainForm.policy}
-                onChange={event =>
+                onChange={next =>
                   setDomainForm(form => ({
                     ...form,
-                    policy: event.target.value as RulePolicy,
+                    policy: next as RulePolicy,
                   }))
                 }
-                className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-              >
-                {POLICY_OPTIONS.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className='flex flex-col gap-1 text-xs text-zinc-400'>
-              Latency budget
-              <select
+              />
+            </div>
+            <div className='flex flex-col gap-1 text-xs text-zinc-400'>
+              <span>Latency budget</span>
+              <Select
+                options={latencySelectOptions}
                 value={domainForm.latency}
-                onChange={event =>
+                onChange={next =>
                   setDomainForm(form => ({
                     ...form,
-                    latency: event.target.value,
+                    latency: next,
                   }))
                 }
-                className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-              >
-                {LATENCY_OPTIONS.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
             <label className='flex items-center gap-2 text-xs text-zinc-400'>
               <input
                 type='checkbox'
@@ -644,9 +654,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
                         {rule.policy}
                       </span>
                     </td>
-                    <td className='px-5 py-4 text-zinc-400'>
-                      {rule.latency}
-                    </td>
+                    <td className='px-5 py-4 text-zinc-400'>{rule.latency}</td>
                     <td className='px-5 py-4'>
                       <span
                         className={`rounded-full border px-2.5 py-1 text-xs ${
@@ -691,14 +699,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
 
       <section className='panel'>
         <header className='flex flex-wrap items-center justify-between gap-4'>
-          <div>
-            <h3 className='panel-title'>File type fallbacks</h3>
-            <p className='panel-subtitle mt-1 max-w-2xl'>
-              When links resolve to files, we can preselect the right browser
-              profile so the asynchronous worker can open locally or hand off to
-              the cloud.
-            </p>
-          </div>
+          <h3 className='panel-title'>File type rules</h3>
           <div className='flex gap-2'>
             <button
               className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-emerald-400/40 hover:text-emerald-200'
@@ -735,40 +736,33 @@ export default function Rules({ availableBrowsers }: RulesProps) {
                 placeholder='.pdf'
               />
             </label>
-            <label className='flex flex-col gap-1 text-xs text-zinc-400'>
-              Browser profile
-              <input
-                list='browser-options'
+            <div className='flex flex-col gap-1 text-xs text-zinc-400'>
+              <span>Browser profile</span>
+              <Combobox
+                options={comboboxOptions}
                 value={fileForm.browser}
-                onChange={event =>
+                onChange={next =>
                   setFileForm(form => ({
                     ...form,
-                    browser: event.target.value,
+                    browser: next,
                   }))
                 }
-                className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-                placeholder='Arc · Workspace'
+                placeholder='Search browsers'
               />
-            </label>
-            <label className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-2 md:col-span-1'>
-              Policy
-              <select
+            </div>
+            <div className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-2 md:col-span-1'>
+              <span>Policy</span>
+              <Select
+                options={policySelectOptions}
                 value={fileForm.policy}
-                onChange={event =>
+                onChange={next =>
                   setFileForm(form => ({
                     ...form,
-                    policy: event.target.value as RulePolicy,
+                    policy: next as RulePolicy,
                   }))
                 }
-                className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-              >
-                {POLICY_OPTIONS.map(option => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
             <div className='flex gap-3 sm:col-span-2'>
               <button
                 type='submit'
@@ -826,12 +820,6 @@ export default function Rules({ availableBrowsers }: RulesProps) {
           )}
         </div>
       </section>
-
-      <datalist id='browser-options'>
-        {browserOptions.map(option => (
-          <option key={option.id} value={option.label} />
-        ))}
-      </datalist>
 
       <section className='panel'>
         <h3 className='panel-title'>Execution notes</h3>

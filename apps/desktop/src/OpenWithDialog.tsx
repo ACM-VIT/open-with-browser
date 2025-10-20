@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { type UIState, useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
@@ -41,13 +41,29 @@ export default function OpenWithDialog({
   const defaultSelection = storeSelected ?? browsers[0]?.id ?? null;
   const selected = localSelected ?? defaultSelection;
 
-  if (!open) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setLocalSelected(null);
     if (onCloseProp) onCloseProp();
     else closeDialog();
-  };
+  }, [closeDialog, onCloseProp]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, handleClose]);
+
+  if (!open) return null;
 
   const handleChoose = async (persist: 'just-once' | 'always') => {
     const browser = browsers.find(b => b.id === selected);
@@ -66,28 +82,28 @@ export default function OpenWithDialog({
   };
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur'>
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur p-4 sm:p-6'>
       <div
         role='dialog'
         aria-modal='true'
-        className='relative w-[min(420px,calc(100vw-3rem))] rounded-[28px] border border-white/5 bg-zinc-950/90 p-6 shadow-soft'
+        className='relative flex w-full max-w-md flex-col rounded-[28px] border border-white/5 bg-zinc-950/90 shadow-soft max-h-[min(85vh,640px)]'
       >
         <button
           aria-label='Close'
-          className='absolute right-3 top-3 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
+          className='absolute right-4 top-4 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
           onClick={handleClose}
         >
           Esc
         </button>
 
-        <header>
+        <header className='px-6 pt-6'>
           <h2 className='text-lg font-semibold text-zinc-100'>Open with</h2>
           <p className='mt-1 text-sm text-zinc-400'>
             Choose the browser profile that should receive this launch request.
           </p>
         </header>
 
-        <div className='mt-6 space-y-3'>
+        <div className='mt-6 flex-1 space-y-3 overflow-y-auto px-6 pb-4 pr-4 sm:pr-6 min-h-0'>
           {browsers.map(browser => {
             const isSelected = selected === browser.id;
             const fallbackGlyph = browser.name.slice(0, 1).toUpperCase();
@@ -141,7 +157,7 @@ export default function OpenWithDialog({
           })}
         </div>
 
-        <div className='mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+        <div className='flex flex-col gap-3 border-t border-white/5 px-6 py-6 md:flex-row md:items-center md:justify-between'>
           <button
             onClick={() => handleChoose('just-once')}
             disabled={disabled || submitting}
