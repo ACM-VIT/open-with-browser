@@ -6,9 +6,9 @@ Welcome to the Open With Browser documentation. This collection of guides helps 
 
 ### Platform-Specific Guides
 - **[Windows Browser Profiles](./windows-browser-profiles.md)** - Complete guide to browser profile paths on Windows for Chrome, Edge, Brave, and Firefox
+- **[macOS Browser Profiles](./macos-browser-profiles.md)** - Complete guide to browser profile paths on macOS for Chrome, Edge, Brave, and Firefox
 
 ### Planned Documentation
-- **macOS Browser Profiles** - Browser profile paths for macOS systems
 - **Linux Browser Profiles** - Browser profile paths for various Linux distributions
 - **Browser Discovery Implementation** - Technical guide for implementing browser detection
 - **Profile Launching Guide** - How to launch browsers with specific profiles
@@ -64,10 +64,11 @@ Used to establish the application as the default browser handler on the OS and d
 ### Supported Browsers
 | Browser | Windows | macOS | Linux | Profile Support |
 |---------|---------|--------|-------|-----------------|
-| Google Chrome | Documented | Planned | Planned | Documented |
-| Microsoft Edge | Documented | Planned | Planned | Documented |
-| Brave Browser | Documented | Planned | Planned | Documented |
-| Mozilla Firefox | Documented | Planned | Planned | Documented |
+| Google Chrome | Documented | Documented | Planned | Documented |
+| Microsoft Edge | Documented | Documented | Planned | Documented |
+| Brave Browser | Documented | Documented | Planned | Documented |
+| Mozilla Firefox | Documented | Documented | Planned | Documented |
+
 
 **Legend**: Documented | Planned | Not supported
 
