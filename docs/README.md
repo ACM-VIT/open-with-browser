@@ -27,6 +27,38 @@ Welcome to the Open With Browser documentation. This collection of guides helps 
 - **Testing Profile Discovery** - Validation and testing strategies
 - **Security Considerations** - Best practices for accessing user data
 
+## Screenshots and Page Overview
+
+### 1. Dashboard
+![Screenshot of the Dashboard page](assets/dashboard.png)
+The main landing page gives users a quick overview of the application's real-time status and recent activity. It shows the status of any Incoming Link request and tracks Recent hand-offs made by the application.
+
+### 2. The Open With Dialog 
+![Screenshot of the open with page](assets/open-with.png)
+This is the compact, essential pop-up window that appears when a link is intercepted and no rule is matched. It prompts the user to make a manual, immediate routing decision.
+### 3. Rules Page
+![Screenshot of the rules page1](assets/rules_1.png)
+![Screenshot of the rules page2](assets/rules_2.png)
+The Rules page is the central control panel for automating link and file routing in the application. It allows users to define explicit logic for the app to follow, preventing the need for manual selection.
+
+The page's main function is split into two sections:
+- Domain Rules:   
+Used to automatically direct web links based on the website's domain to a specific browser profile.
+- File Type Rules:    
+Used to assign specific file extensions (like .pdf or .fig) to a designated browser.
+### 4. Settings
+![Screenshot of the settings page1](assets/settings_1.png)
+![Screenshot of the settings page2](assets/settings_2.png)
+The Settings page is the application's control center for managing how it integrates with the operating system and how it handles links by default.
+
+The page's main function is divided into three key areas:
+- System Setup:       
+Used to establish the application as the default browser handler on the OS and displays detected browsers.
+- General Settings:    
+ Covers core user preferences such as the ability to Remember browser choice and an option to Start app at login.
+- Browser Orchestration & Diagnostics:    
+ Allows users to set a mandatory Default browser for unmatched links (the fallback) to ensure all links open automatically, and provides essential Diagnostics tools for troubleshooting.      
+
 ## Quick Reference
 
 ### Supported Browsers

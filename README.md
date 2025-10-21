@@ -36,6 +36,14 @@
 
 ---
 
+## Quick Showcase
+
+**Open With Browser** offers a centralized **Dashboard** for link status and recent activity, alongside customizable rules and precise browser selection.
+
+![Screenshot of the Dashboard](asset/dashboard.png)
+
+---
+
 ## About
 Open With Browser is a desktop application that enhances link management by choosing the right browser and profile automatically based on user‑defined rules.
 
