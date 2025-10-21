@@ -647,31 +647,32 @@ export default function Rules({ availableBrowsers }: RulesProps) {
   };
 
   // CSV CONVERT -----------------------------------------
-  const convertToCSV = (rules: DomainRule[]): string => {
-    const headers = [
-      'pattern',
-      'browser',
-      'policy',
-      'latency',
-      'enabled',
-      'matchType',
+ const convertToCSV = (rules: DomainRule[]): string => {
+  const headers = [
+    'pattern',
+    'browser',
+    'policy',
+    'latency',
+    'enabled',
+    'matchType',
+  ];
+  const csvRows = [headers.join(',')];
+
+  rules.forEach(rule => {
+    const row = [
+      rule.pattern || '',
+      rule.browserLabel || '',
+      rule.policy || '',
+      rule.latency?.toString() || 'Auto',
+      rule.enabled?.toString() || 'true',
+      rule.matchType || 'domain',
     ];
-    const csvRows = [headers.join(',')];
+    csvRows.push(row.join(','));
+  });
 
-    rules.forEach(rule => {
-      const row = [
-        `"${rule.pattern}"`,
-        `"${rule.browserLabel}"`,
-        `"${rule.policy}"`,
-        rule.latency?.toString() || 'Auto',
-        rule.enabled?.toString() || 'true',
-        `"${rule.matchType || 'domain'}"`,
-      ];
-      csvRows.push(row.join(','));
-    });
+  return csvRows.join('\n');
+};
 
-    return csvRows.join('\n');
-  };
 
   // CSV download  -----------------------------------------
   const handleExportCSV = () => {
