@@ -646,6 +646,64 @@ export default function Rules({ availableBrowsers }: RulesProps) {
     reader.readAsText(file);
   };
 
+  // CSV CONVERT -----------------------------------------
+  const convertToCSV = (rules: DomainRule[]): string => {
+    const headers = [
+      'pattern',
+      'browser',
+      'policy',
+      'latency',
+      'enabled',
+      'matchType',
+    ];
+    const csvRows = [headers.join(',')];
+
+    rules.forEach(rule => {
+      const row = [
+        `"${rule.pattern}"`,
+        `"${rule.browserLabel}"`,
+        `"${rule.policy}"`,
+        rule.latency?.toString() || 'Auto',
+        rule.enabled?.toString() || 'true',
+        `"${rule.matchType || 'domain'}"`,
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    return csvRows.join('\n');
+  };
+
+  // CSV download  -----------------------------------------
+  const handleExportCSV = () => {
+    if (!domainRules || domainRules.length === 0) {
+      const emptyCSV = 'pattern,browser,policy,latency,enabled,matchType\n';
+      downloadCSV(emptyCSV, 'rules-template.csv');
+      return;
+    }
+
+    const csvContent = convertToCSV(domainRules);
+    const timestamp = new Date().toISOString().split('T')[0];
+    downloadCSV(csvContent, `rules-backup-${timestamp}.csv`);
+  };
+
+  //File download  -----------------------------------------
+  const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className='flex flex-col gap-8 pb-16'>
       <section className='panel'>
@@ -671,12 +729,21 @@ export default function Rules({ availableBrowsers }: RulesProps) {
       <section className='panel'>
         <header className='flex flex-wrap items-center justify-between gap-4'>
           <h3 className='panel-title'>URL rules</h3>
-          <button
-            className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
-            onClick={handleCsvClick}
-          >
-            Import CSV
-          </button>
+          <div className='flex items-center gap-4'>
+            <button
+              className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
+              onClick={handleCsvClick}
+            >
+              Import CSV
+            </button>
+            <button
+              className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-emerald-400/40 hover:text-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed'
+              onClick={handleExportCSV}
+              disabled={!domainRules || domainRules.length === 0}
+            >
+              Export CSV
+            </button>
+          </div>
         </header>
 
         {addingDomain ? (
