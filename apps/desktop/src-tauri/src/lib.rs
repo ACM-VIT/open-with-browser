@@ -1,11 +1,11 @@
-mod browser_details;
+pub mod browser_details;
 mod commands;
-mod diagnostics;
+pub mod diagnostics;
 mod domain;
-mod link;
+pub mod link;
 mod platform;
 mod preferences;
-mod routing;
+pub mod routing;
 
 use commands::{
     clear_diagnostics, export_diagnostics, get_available_browsers, get_diagnostics,

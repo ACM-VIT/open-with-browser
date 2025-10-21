@@ -79,7 +79,8 @@ fn dispatch_urls(app: &AppHandle, urls: Vec<String>, origin: LinkSource) {
     });
 }
 
-fn extract_urls(args: &[String]) -> Vec<String> {
+/// Extracts unique http(s) URLs from command-line arguments.
+pub fn extract_urls(args: &[String]) -> Vec<String> {
     let mut collected = Vec::new();
     let mut after_delimiter = false;
 
@@ -109,7 +110,8 @@ fn extract_urls(args: &[String]) -> Vec<String> {
     collected
 }
 
-fn parse_argument(arg: &str) -> Option<String> {
+/// Parses an individual CLI argument for a url candidate.
+pub fn parse_argument(arg: &str) -> Option<String> {
     if let Some(candidate) = parse_candidate(arg) {
         return Some(candidate);
     }
@@ -126,7 +128,8 @@ fn parse_argument(arg: &str) -> Option<String> {
     None
 }
 
-fn parse_candidate(input: &str) -> Option<String> {
+/// Parses a raw string, returning a normalized http(s) URL if valid.
+pub fn parse_candidate(input: &str) -> Option<String> {
     let trimmed = input.trim_matches(|c| matches!(c, '"' | '\''));
     if trimmed.is_empty() {
         return None;
@@ -149,7 +152,8 @@ fn parse_candidate(input: &str) -> Option<String> {
     None
 }
 
-fn percent_decode_if_needed(input: &str) -> Cow<'_, str> {
+/// Percent decodes a string when common URL encodings are present.
+pub fn percent_decode_if_needed(input: &str) -> Cow<'_, str> {
     if input.contains("%3A") || input.contains("%2F") {
         if let Ok(decoded) = percent_encoding::percent_decode_str(input).decode_utf8() {
             return Cow::Owned(decoded.into_owned());
@@ -158,7 +162,8 @@ fn percent_decode_if_needed(input: &str) -> Cow<'_, str> {
     Cow::Borrowed(input)
 }
 
-fn push_unique(list: &mut Vec<String>, value: String) {
+/// Pushes a value into the list when it does not already exist.
+pub fn push_unique(list: &mut Vec<String>, value: String) {
     if !list.iter().any(|existing| existing == &value) {
         list.push(value);
     }
