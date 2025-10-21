@@ -46,7 +46,7 @@ export default function OpenWithDialog({
     if (onCloseProp) onCloseProp();
     else closeDialog();
   }, [closeDialog, onCloseProp]);
-  
+
   useEffect(() => {
     if (!open) return undefined;
 
