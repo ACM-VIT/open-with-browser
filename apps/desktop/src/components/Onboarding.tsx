@@ -237,7 +237,7 @@ function OnboardingOverlay({
     const match =
       selectedProfileId && selectedProfileId !== '__none__'
         ? profiles.find(profile => profile.id === selectedProfileId)
-      : (profiles.find(profile => !profile.profileDirectory) ?? null);
+        : (profiles.find(profile => !profile.profileDirectory) ?? null);
 
     setStatus({ kind: 'saving', message: 'Saving fallback…' });
     try {
@@ -285,229 +285,229 @@ function OnboardingOverlay({
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className='w-full max-w-3xl rounded-[32px] border border-white/8 bg-zinc-950/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.6)]'
         >
-            <div className='flex items-start justify-between gap-6'>
-              <div>
-                <p className='text-[11px] uppercase tracking-[0.32em] text-emerald-300'>
-                  Getting started
-                </p>
-                <h2 className='mt-2 text-3xl font-semibold text-zinc-50'>
-                  {STEPS.find(config => config.id === step)?.title}
-                </h2>
-                <p className='mt-3 max-w-xl text-sm text-zinc-300'>
-                  {STEPS.find(config => config.id === step)?.description}
-                </p>
-              </div>
-              <button
-                type='button'
-                onClick={handleSkip}
-                className='rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-zinc-300 transition hover:border-white/20 hover:text-zinc-100'
-              >
-                Skip
-              </button>
+          <div className='flex items-start justify-between gap-6'>
+            <div>
+              <p className='text-[11px] uppercase tracking-[0.32em] text-emerald-300'>
+                Getting started
+              </p>
+              <h2 className='mt-2 text-3xl font-semibold text-zinc-50'>
+                {STEPS.find(config => config.id === step)?.title}
+              </h2>
+              <p className='mt-3 max-w-xl text-sm text-zinc-300'>
+                {STEPS.find(config => config.id === step)?.description}
+              </p>
             </div>
+            <button
+              type='button'
+              onClick={handleSkip}
+              className='rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-zinc-300 transition hover:border-white/20 hover:text-zinc-100'
+            >
+              Skip
+            </button>
+          </div>
 
-            <ol className='mt-6 flex flex-wrap items-center gap-3 text-[11px] text-zinc-500 sm:gap-4'>
-              {STEPS.map((config, index) => {
-                const isActive = config.id === step;
-                const isCompleted =
-                  STEPS.findIndex(item => item.id === step) > index;
-                return (
-                  <li
-                    key={config.id}
-                    className='flex w-full flex-col items-center gap-1 rounded-[14px] border border-white/5 bg-black/20 px-3 py-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 sm:border-transparent sm:bg-transparent'
+          <ol className='mt-6 flex flex-wrap items-center gap-3 text-[11px] text-zinc-500 sm:gap-4'>
+            {STEPS.map((config, index) => {
+              const isActive = config.id === step;
+              const isCompleted =
+                STEPS.findIndex(item => item.id === step) > index;
+              return (
+                <li
+                  key={config.id}
+                  className='flex w-full flex-col items-center gap-1 rounded-[14px] border border-white/5 bg-black/20 px-3 py-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2 sm:border-transparent sm:bg-transparent'
+                >
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold ${
+                      isActive
+                        ? 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100'
+                        : isCompleted
+                          ? 'border-emerald-300/40 bg-emerald-500/10 text-emerald-200'
+                          : 'border-white/10 bg-black/40 text-zinc-500'
+                    }`}
                   >
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold ${
-                        isActive
-                          ? 'border-emerald-300/70 bg-emerald-500/20 text-emerald-100'
-                          : isCompleted
-                            ? 'border-emerald-300/40 bg-emerald-500/10 text-emerald-200'
-                            : 'border-white/10 bg-black/40 text-zinc-500'
-                      }`}
-                    >
-                      {index + 1}
-                    </span>
-                    <span className='text-center text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400 sm:text-left sm:text-[11px] sm:tracking-[0.28em]'>
-                      {config.title}
+                    {index + 1}
+                  </span>
+                  <span className='text-center text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400 sm:text-left sm:text-[11px] sm:tracking-[0.28em]'>
+                    {config.title}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+
+          <div className='mt-8 rounded-[24px] border border-white/8 bg-black/30 p-6 text-sm text-zinc-200'>
+            {step === 0 ? (
+              <div className='space-y-4'>
+                <p>
+                  Open With Browser sits between your apps and every link you
+                  click. It detects the right browser profile and opens it for
+                  you—no copy-paste, no guessing.
+                </p>
+                <ul className='space-y-3 text-sm text-zinc-300'>
+                  <li className='flex items-start gap-3'>
+                    <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
+                    <span>
+                      Route links by host, path, query, or any regex pattern.
                     </span>
                   </li>
-                );
-              })}
-            </ol>
+                  <li className='flex items-start gap-3'>
+                    <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
+                    <span>
+                      Remember the browser you used last time, or always ask
+                      before launching.
+                    </span>
+                  </li>
+                  <li className='flex items-start gap-3'>
+                    <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
+                    <span>
+                      Stay in flow: the fallback browser prevents dead ends when
+                      no rule matches.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            ) : null}
 
-            <div className='mt-8 rounded-[24px] border border-white/8 bg-black/30 p-6 text-sm text-zinc-200'>
-              {step === 0 ? (
-                <div className='space-y-4'>
-                  <p>
-                    Open With Browser sits between your apps and every link you
-                    click. It detects the right browser profile and opens it for
-                    you—no copy-paste, no guessing.
-                  </p>
-                  <ul className='space-y-3 text-sm text-zinc-300'>
-                    <li className='flex items-start gap-3'>
-                      <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
-                      <span>
-                        Route links by host, path, query, or any regex pattern.
-                      </span>
-                    </li>
-                    <li className='flex items-start gap-3'>
-                      <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
-                      <span>
-                        Remember the browser you used last time, or always ask
-                        before launching.
-                      </span>
-                    </li>
-                    <li className='flex items-start gap-3'>
-                      <span className='mt-1 h-2 w-2 rounded-full bg-emerald-400' />
-                      <span>
-                        Stay in flow: the fallback browser prevents dead ends
-                        when no rule matches.
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              ) : null}
-
-              {step === 1 ? (
-                <div className='space-y-4'>
-                  {browserNames.length === 0 ? (
-                    <div className='rounded-[18px] border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200'>
-                      No browsers detected yet. You can scan for browsers later
-                      in Settings → Fallback browser.
-                    </div>
-                  ) : (
-                    <>
-                      <div className='grid gap-4 md:grid-cols-2'>
-                        <label className='flex flex-col gap-1 text-xs text-zinc-400'>
-                          Browser
-                          <Select
-                            options={browserSelectOptions}
-                            value={selectedBrowser}
-                            onChange={nextValue => {
-                              setSelectedBrowser(nextValue);
-                              setSelectedProfileId('__none__');
-                              setFallbackSaved(false);
-                              setStatus({ kind: 'idle', message: '' });
-                            }}
-                            placeholder='Select a browser…'
-                            disabled={browserSelectOptions.length === 0}
-                          />
-                        </label>
-                        <label className='flex flex-col gap-1 text-xs text-zinc-400'>
-                          Profile
-                          <Select
-                            options={profileSelectOptions}
-                            value={selectedProfileId}
-                            onChange={nextValue => {
-                              setSelectedProfileId(nextValue);
-                              setFallbackSaved(false);
-                              setStatus({ kind: 'idle', message: '' });
-                            }}
-                            placeholder={
-                              selectedBrowser
-                                ? 'Choose a profile…'
-                                : 'Select a browser first'
-                            }
-                            disabled={
-                              !selectedBrowser ||
-                              profileSelectOptions.every(
-                                option => option.disabled
-                              )
-                            }
-                          />
-                        </label>
-                      </div>
-                      <button
-                        type='button'
-                        onClick={handleSaveFallback}
-                        disabled={status.kind === 'saving' || !selectedBrowser}
-                        className='rounded-[18px] border border-emerald-300/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-200/70 disabled:opacity-40'
-                      >
-                        {status.kind === 'saving'
-                          ? 'Saving…'
-                          : fallbackSaved
-                            ? 'Fallback saved'
-                            : 'Save fallback'}
-                      </button>
-                    </>
-                  )}
-                  {status.kind === 'error' ? (
-                    <p className='text-xs text-red-300'>{status.message}</p>
-                  ) : null}
-                  {status.kind === 'success' ? (
-                    <p className='text-xs text-emerald-200'>{status.message}</p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {step === 2 ? (
-                <div className='space-y-4'>
-                  <p>
-                    Rules decide which browser opens a link before you even see
-                    it. Combine match types to cover everything from entire
-                    domains to a single dashboard.
-                  </p>
-                  <div className='grid gap-3 text-sm text-zinc-300 md:grid-cols-2'>
-                    <div className='rounded-[18px] border border-white/10 bg-black/40 p-4'>
-                      <p className='font-semibold text-emerald-200'>
-                        Wildcards &amp; regex
-                      </p>
-                      <p className='mt-2 text-xs text-zinc-400'>
-                        Use patterns like{' '}
-                        <code className='rounded bg-black/60 px-1 py-0.5 text-[11px]'>
-                          *.figma.com/*
-                        </code>{' '}
-                        or full regular expressions to stay precise.
-                      </p>
-                    </div>
-                    <div className='rounded-[18px] border border-white/10 bg-black/40 p-4'>
-                      <p className='font-semibold text-emerald-200'>
-                        Workspace aware
-                      </p>
-                      <p className='mt-2 text-xs text-zinc-400'>
-                        Map GitHub, JIRA, or university portals to the browser
-                        profile that already has the right accounts signed in.
-                      </p>
-                    </div>
+            {step === 1 ? (
+              <div className='space-y-4'>
+                {browserNames.length === 0 ? (
+                  <div className='rounded-[18px] border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200'>
+                    No browsers detected yet. You can scan for browsers later in
+                    Settings → Fallback browser.
                   </div>
-                  <p className='text-xs text-zinc-500'>
-                    Tip: import rules from CSV or paste your existing link
-                    routing sheet—Open With Browser will keep them in sync.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-
-            <div className='mt-8 flex flex-wrap items-center justify-between gap-3'>
-              <button
-                type='button'
-                onClick={handleBack}
-                disabled={step === 0}
-                className='rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-soft-sm transition enabled:hover:border-white/20 enabled:hover:text-zinc-100 disabled:opacity-40'
-              >
-                Back
-              </button>
-              <div className='flex items-center gap-3'>
-                {step === 2 ? (
-                  <button
-                    type='button'
-                    onClick={() => onComplete({ navigateToRules: true })}
-                    className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-200/70'
-                  >
-                    Open rules now
-                  </button>
+                ) : (
+                  <>
+                    <div className='grid gap-4 md:grid-cols-2'>
+                      <label className='flex flex-col gap-1 text-xs text-zinc-400'>
+                        Browser
+                        <Select
+                          options={browserSelectOptions}
+                          value={selectedBrowser}
+                          onChange={nextValue => {
+                            setSelectedBrowser(nextValue);
+                            setSelectedProfileId('__none__');
+                            setFallbackSaved(false);
+                            setStatus({ kind: 'idle', message: '' });
+                          }}
+                          placeholder='Select a browser…'
+                          disabled={browserSelectOptions.length === 0}
+                        />
+                      </label>
+                      <label className='flex flex-col gap-1 text-xs text-zinc-400'>
+                        Profile
+                        <Select
+                          options={profileSelectOptions}
+                          value={selectedProfileId}
+                          onChange={nextValue => {
+                            setSelectedProfileId(nextValue);
+                            setFallbackSaved(false);
+                            setStatus({ kind: 'idle', message: '' });
+                          }}
+                          placeholder={
+                            selectedBrowser
+                              ? 'Choose a profile…'
+                              : 'Select a browser first'
+                          }
+                          disabled={
+                            !selectedBrowser ||
+                            profileSelectOptions.every(
+                              option => option.disabled
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type='button'
+                      onClick={handleSaveFallback}
+                      disabled={status.kind === 'saving' || !selectedBrowser}
+                      className='rounded-[18px] border border-emerald-300/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-200/70 disabled:opacity-40'
+                    >
+                      {status.kind === 'saving'
+                        ? 'Saving…'
+                        : fallbackSaved
+                          ? 'Fallback saved'
+                          : 'Save fallback'}
+                    </button>
+                  </>
+                )}
+                {status.kind === 'error' ? (
+                  <p className='text-xs text-red-300'>{status.message}</p>
                 ) : null}
+                {status.kind === 'success' ? (
+                  <p className='text-xs text-emerald-200'>{status.message}</p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className='space-y-4'>
+                <p>
+                  Rules decide which browser opens a link before you even see
+                  it. Combine match types to cover everything from entire
+                  domains to a single dashboard.
+                </p>
+                <div className='grid gap-3 text-sm text-zinc-300 md:grid-cols-2'>
+                  <div className='rounded-[18px] border border-white/10 bg-black/40 p-4'>
+                    <p className='font-semibold text-emerald-200'>
+                      Wildcards &amp; regex
+                    </p>
+                    <p className='mt-2 text-xs text-zinc-400'>
+                      Use patterns like{' '}
+                      <code className='rounded bg-black/60 px-1 py-0.5 text-[11px]'>
+                        *.figma.com/*
+                      </code>{' '}
+                      or full regular expressions to stay precise.
+                    </p>
+                  </div>
+                  <div className='rounded-[18px] border border-white/10 bg-black/40 p-4'>
+                    <p className='font-semibold text-emerald-200'>
+                      Workspace aware
+                    </p>
+                    <p className='mt-2 text-xs text-zinc-400'>
+                      Map GitHub, JIRA, or university portals to the browser
+                      profile that already has the right accounts signed in.
+                    </p>
+                  </div>
+                </div>
+                <p className='text-xs text-zinc-500'>
+                  Tip: import rules from CSV or paste your existing link routing
+                  sheet—Open With Browser will keep them in sync.
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className='mt-8 flex flex-wrap items-center justify-between gap-3'>
+            <button
+              type='button'
+              onClick={handleBack}
+              disabled={step === 0}
+              className='rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-300 shadow-soft-sm transition enabled:hover:border-white/20 enabled:hover:text-zinc-100 disabled:opacity-40'
+            >
+              Back
+            </button>
+            <div className='flex items-center gap-3'>
+              {step === 2 ? (
                 <button
                   type='button'
-                  onClick={handleNext}
-                  disabled={!canProceed}
-                  className='rounded-[18px] border border-emerald-300/60 bg-emerald-500/15 px-6 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-200/70 disabled:opacity-40'
+                  onClick={() => onComplete({ navigateToRules: true })}
+                  className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-200/70'
                 >
-                  {step === 2 ? 'Finish' : 'Next'}
+                  Open rules now
                 </button>
-              </div>
+              ) : null}
+              <button
+                type='button'
+                onClick={handleNext}
+                disabled={!canProceed}
+                className='rounded-[18px] border border-emerald-300/60 bg-emerald-500/15 px-6 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-200/70 disabled:opacity-40'
+              >
+                {step === 2 ? 'Finish' : 'Next'}
+              </button>
             </div>
-          </motion.div>
+          </div>
+        </motion.div>
       </AnimatePresence>
     </motion.div>
   );
@@ -530,10 +530,7 @@ export default function Onboarding({
   return (
     <AnimatePresence>
       {open ? (
-        <OnboardingOverlay
-          key='onboarding-overlay'
-          {...overlayProps}
-        />
+        <OnboardingOverlay key='onboarding-overlay' {...overlayProps} />
       ) : null}
     </AnimatePresence>
   );
