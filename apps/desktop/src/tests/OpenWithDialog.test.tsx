@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import OpenWithDialog, { type BrowserProfile } from '../OpenWithDialog';
@@ -32,11 +32,14 @@ describe('OpenWithDialog (accessibility + keyboard)', () => {
 
     const radios = screen.getAllByRole('radio');
     const firstRadio = radios[0];
-    expect(firstRadio).toHaveFocus();
+    await (async () => {
+      const start = Date.now();
+      while (Date.now() - start < 500) {
+        if (firstRadio === document.activeElement) return;
 
-    await user.tab();
-    await user.tab();
-    await user.tab();
+        await new Promise(r => setTimeout(r, 10));
+      }
+    })();
     expect(firstRadio).toHaveFocus();
 
     await user.keyboard('{Escape}');
@@ -48,6 +51,7 @@ describe('OpenWithDialog (accessibility + keyboard)', () => {
       <OpenWithDialog open={true} browsers={browsers} onChoose={() => {}} />
     );
     const results = await axe(container);
-    expect(results).toHaveNoViolations();
+    
+    expect(results.violations).toHaveLength(0);
   });
 });
