@@ -1,0 +1,156 @@
+name: Open With Browser Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (semver) to build (optional override for prerelease)'
+        required: false
+      prerelease:
+        description: 'Mark GitHub Release as pre-release'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            target: ''
+          - os: windows-latest
+            platform: windows
+            target: ''
+          - os: macos-latest
+            platform: macos
+            target: ''
+    env:
+      TAURI_SKIP_UPDATE_CHECK: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install Linux system deps (Tauri)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libasound2-dev \
+            libx11-dev \
+            libxdo-dev \
+            pkg-config \
+            libssl-dev \
+            libayatana-appindicator3-dev
+          pkg-config --libs --cflags glib-2.0 || true
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: bun install --frozen-lockfile
+
+      - name: Build Tauri App
+        working-directory: apps/desktop
+        run: bun run tauri build
+
+      - name: Collect Artifacts (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          mkdir -p artifacts
+          ls -R src-tauri/target/release/bundle
+          cp -v src-tauri/target/release/bundle/appimage/*.AppImage artifacts/ 2>/dev/null || echo 'no appimage'
+          cp -v src-tauri/target/release/bundle/deb/*.deb artifacts/ 2>/dev/null || echo 'no deb'
+          cp -v src-tauri/target/release/bundle/rpm/*.rpm artifacts/ 2>/dev/null || echo 'no rpm'
+          cp -v src-tauri/target/release/bundle/msi/*.msi artifacts/ 2>/dev/null || echo 'no msi (expected)'
+        working-directory: apps/desktop
+
+      - name: Collect Artifacts (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Get-ChildItem src-tauri/target/release/bundle -Recurse
+          Copy-Item src-tauri/target/release/bundle/msi/*.msi artifacts -ErrorAction SilentlyContinue
+          Copy-Item src-tauri/target/release/bundle/nsis/*.* artifacts -ErrorAction SilentlyContinue
+        working-directory: apps/desktop
+
+      - name: Collect Artifacts (macOS)
+        if: matrix.platform == 'macos'
+        run: |
+          mkdir -p artifacts
+          ls -R src-tauri/target/release/bundle
+          cp -v src-tauri/target/release/bundle/dmg/*.dmg artifacts/ 2>/dev/null || echo 'no dmg yet'
+          cp -v src-tauri/target/release/bundle/macos/*.app.tar.gz artifacts/ 2>/dev/null || echo 'no app tar'
+        working-directory: apps/desktop
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-with-browser-${{ matrix.platform }}
+          path: apps/desktop/artifacts
+          if-no-files-found: warn
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Determine version
+        id: ver
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            ref="${GITHUB_REF##*/}"
+            echo "version=${ref}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: Open With Browser ${{ steps.ver.outputs.version }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' || contains(steps.ver.outputs.version, '-rc') }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            dist-artifacts/**
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
