@@ -46,7 +46,7 @@ export default function OpenWithDialog({
     if (onCloseProp) onCloseProp();
     else closeDialog();
   }, [closeDialog, onCloseProp]);
-
+  
   useEffect(() => {
     if (!open) return undefined;
 
@@ -56,6 +56,11 @@ export default function OpenWithDialog({
         handleClose();
       }
     };
+
+    const first = document.querySelector<HTMLInputElement>(
+      'input[name="owd-browser"]'
+    );
+    first?.focus();
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -80,14 +85,6 @@ export default function OpenWithDialog({
       }
     }
   };
-
-  useEffect(() => {
-    if (!open) return;
-    const first = document.querySelector<HTMLInputElement>(
-      'input[name="owd-browser"]'
-    );
-    first?.focus();
-  }, [open]);
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur p-4 sm:p-6'>

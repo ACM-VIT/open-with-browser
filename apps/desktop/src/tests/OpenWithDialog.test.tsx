@@ -51,7 +51,6 @@ describe('OpenWithDialog (accessibility + keyboard)', () => {
       <OpenWithDialog open={true} browsers={browsers} onChoose={() => {}} />
     );
     const results = await axe(container);
-    
     expect(results.violations).toHaveLength(0);
   });
 });
