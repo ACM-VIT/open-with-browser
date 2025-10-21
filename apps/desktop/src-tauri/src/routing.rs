@@ -344,7 +344,8 @@ impl RoutingService {
     }
 }
 
-fn normalize_url(input: &str) -> String {
+/// Normalize incoming URLs by ensuring they include a scheme and trimming whitespace.
+pub fn normalize_url(input: &str) -> String {
     let trimmed = input.trim();
     if trimmed.is_empty() {
         return String::new();
@@ -386,7 +387,8 @@ fn resolve_browser_path(name: &str) -> Option<PathBuf> {
     None
 }
 
-fn normalize_browser_key(value: &str) -> String {
+/// Normalize a browser name into a lowercase alphanumeric key.
+pub fn normalize_browser_key(value: &str) -> String {
     value
         .chars()
         .filter(|c| c.is_ascii_alphanumeric())
@@ -421,7 +423,8 @@ fn launch_with_browser(
     command.spawn().map(|_| ()).map_err(|err| err.to_string())
 }
 
-fn add_profile_args(command: &mut Command, browser_name: &str, profile: &str) {
+/// Append browser-specific arguments to target a profile directory.
+pub fn add_profile_args(command: &mut Command, browser_name: &str, profile: &str) {
     let trimmed = profile.trim();
     if trimmed.is_empty() {
         return;
