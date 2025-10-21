@@ -4,15 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
-  },
+  "dev": "vite",
+  "build": "tsc && vite build",
+  "preview": "vite preview",
+  "tauri": "tauri",
+  "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+  "lint:fix": "eslint . --ext ts,tsx --fix",
+  "format": "prettier --write .",
+  "format:check": "prettier --check .",
+  "test": "vitest run",
+  "test:watch": "vitest watch",
+  "test:ci": "vitest run --reporter=dot --passWithNoTests"
+},
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
     "@tauri-apps/api": "^2",
