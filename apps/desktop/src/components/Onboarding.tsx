@@ -47,18 +47,20 @@ const STEPS: StepConfig[] = [
 
 type StatusKind = 'idle' | 'saving' | 'success' | 'error';
 
-export default function Onboarding({
-  open,
+const EMPTY_PROFILES: BrowserProfile[] = [];
+
+type OnboardingOverlayProps = Omit<OnboardingProps, 'open'>;
+
+function OnboardingOverlay({
   browsers,
   onClose,
   onComplete,
   onFallbackSaved,
-}: OnboardingProps) {
+}: OnboardingOverlayProps) {
   const [step, setStep] = useState<StepId>(0);
   const [selectedBrowser, setSelectedBrowser] = useState<string>('');
-  const [selectedProfileId, setSelectedProfileId] = useState<string>(
-    '__none__'
-  );
+  const [selectedProfileId, setSelectedProfileId] =
+    useState<string>('__none__');
   const [status, setStatus] = useState<{ kind: StatusKind; message: string }>({
     kind: 'idle',
     message: '',
@@ -97,10 +99,12 @@ export default function Onboarding({
     return map;
   }, [browsers]);
 
-  const activeProfiles =
-    selectedBrowser && profilesByBrowser.has(selectedBrowser)
-      ? profilesByBrowser.get(selectedBrowser) ?? []
-      : [];
+  const activeProfiles = useMemo(() => {
+    if (!selectedBrowser) {
+      return EMPTY_PROFILES;
+    }
+    return profilesByBrowser.get(selectedBrowser) ?? EMPTY_PROFILES;
+  }, [profilesByBrowser, selectedBrowser]);
 
   const browserSelectOptions: SelectOption[] = useMemo(
     () =>
@@ -127,9 +131,7 @@ export default function Onboarding({
       .map(profile => ({
         value: profile.id,
         label:
-          profile.profileLabel ??
-          profile.profileDirectory ??
-          'Browser profile',
+          profile.profileLabel ?? profile.profileDirectory ?? 'Browser profile',
       }));
 
     return [
@@ -145,13 +147,7 @@ export default function Onboarding({
   }, [activeProfiles, selectedBrowser]);
 
   useEffect(() => {
-    if (!open) return;
-
     let cancelled = false;
-
-    setStep(0);
-    setStatus({ kind: 'idle', message: '' });
-    setFallbackSaved(false);
 
     (async () => {
       try {
@@ -190,7 +186,13 @@ export default function Onboarding({
         }
       } catch (err) {
         if (!cancelled) {
-          console.warn('Unable to load fallback preferences', err);
+          setStatus({
+            kind: 'error',
+            message:
+              err instanceof Error
+                ? err.message
+                : 'Unable to load fallback preference.',
+          });
         }
       }
     })();
@@ -198,13 +200,7 @@ export default function Onboarding({
     return () => {
       cancelled = true;
     };
-  }, [open, profilesByBrowser]);
-
-  useEffect(() => {
-    if (!open) {
-      setStatus({ kind: 'idle', message: '' });
-    }
-  }, [open]);
+  }, [profilesByBrowser]);
 
   const handleNext = () => {
     if (step === 2) {
@@ -241,7 +237,7 @@ export default function Onboarding({
     const match =
       selectedProfileId && selectedProfileId !== '__none__'
         ? profiles.find(profile => profile.id === selectedProfileId)
-        : profiles.find(profile => !profile.profileDirectory) ?? null;
+      : (profiles.find(profile => !profile.profileDirectory) ?? null);
 
     setStatus({ kind: 'saving', message: 'Saving fallback…' });
     try {
@@ -259,7 +255,6 @@ export default function Onboarding({
       setFallbackSaved(true);
       onFallbackSaved();
     } catch (err) {
-      console.warn('Failed to save fallback browser', err);
       setStatus({
         kind: 'error',
         message:
@@ -271,28 +266,25 @@ export default function Onboarding({
   };
 
   const canProceed =
-    step === 1
-      ? fallbackSaved || browserNames.length === 0
-      : true;
+    step === 1 ? fallbackSaved || browserNames.length === 0 : true;
 
   return (
-    <AnimatePresence>
-      {open ? (
+    <motion.div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 py-10'
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <AnimatePresence mode='wait'>
         <motion.div
-          className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md px-4 py-10'
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          key={step}
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className='w-full max-w-3xl rounded-[32px] border border-white/8 bg-zinc-950/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.6)]'
         >
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className='w-full max-w-3xl rounded-[32px] border border-white/8 bg-zinc-950/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.6)]'
-          >
             <div className='flex items-start justify-between gap-6'>
               <div>
                 <p className='text-[11px] uppercase tracking-[0.32em] text-emerald-300'>
@@ -418,7 +410,9 @@ export default function Onboarding({
                             }
                             disabled={
                               !selectedBrowser ||
-                              profileSelectOptions.every(option => option.disabled)
+                              profileSelectOptions.every(
+                                option => option.disabled
+                              )
                             }
                           />
                         </label>
@@ -459,7 +453,10 @@ export default function Onboarding({
                         Wildcards &amp; regex
                       </p>
                       <p className='mt-2 text-xs text-zinc-400'>
-                        Use patterns like <code className='rounded bg-black/60 px-1 py-0.5 text-[11px]'>*.figma.com/*</code>{' '}
+                        Use patterns like{' '}
+                        <code className='rounded bg-black/60 px-1 py-0.5 text-[11px]'>
+                          *.figma.com/*
+                        </code>{' '}
                         or full regular expressions to stay precise.
                       </p>
                     </div>
@@ -511,7 +508,32 @@ export default function Onboarding({
               </div>
             </div>
           </motion.div>
-        </motion.div>
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export default function Onboarding({
+  open,
+  browsers,
+  onClose,
+  onComplete,
+  onFallbackSaved,
+}: OnboardingProps) {
+  const overlayProps: OnboardingOverlayProps = {
+    browsers,
+    onClose,
+    onComplete,
+    onFallbackSaved,
+  };
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <OnboardingOverlay
+          key='onboarding-overlay'
+          {...overlayProps}
+        />
       ) : null}
     </AnimatePresence>
   );

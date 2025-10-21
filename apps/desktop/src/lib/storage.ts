@@ -147,7 +147,8 @@ function normalizeDomainRule(raw: Record<string, unknown>): DomainRule {
   const id =
     typeof raw.id === 'string' && raw.id.trim().length > 0
       ? raw.id
-      : globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+      : (globalThis.crypto?.randomUUID?.() ??
+        Math.random().toString(36).slice(2));
 
   const patternSource =
     typeof raw.pattern === 'string'
@@ -158,9 +159,7 @@ function normalizeDomainRule(raw: Record<string, unknown>): DomainRule {
   const pattern = patternSource.trim();
 
   const matchTypeRaw =
-    typeof raw.matchType === 'string'
-      ? raw.matchType.trim().toLowerCase()
-      : '';
+    typeof raw.matchType === 'string' ? raw.matchType.trim().toLowerCase() : '';
 
   const matchType: DomainMatchType = (() => {
     switch (matchTypeRaw) {
@@ -188,7 +187,7 @@ function normalizeDomainRule(raw: Record<string, unknown>): DomainRule {
   const browserLabel =
     typeof raw.browserLabel === 'string'
       ? raw.browserLabel
-      : browserId ?? 'Prompt me';
+      : (browserId ?? 'Prompt me');
 
   const policyRaw =
     typeof raw.policy === 'string' ? raw.policy.trim() : RULE_POLICIES[0];
