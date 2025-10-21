@@ -14,6 +14,7 @@ import {
   setDomainRules,
   setFileTypeRules,
   type DomainRule,
+  type DomainMatchType,
   type FileTypeRule,
   type RulePolicy,
 } from '../lib/storage';
@@ -26,6 +27,33 @@ type RulesProps = {
 
 const POLICY_OPTIONS: RulePolicy[] = ['Always', 'Just once', 'Fallback'];
 const LATENCY_OPTIONS = ['< 100 ms', 'Stable', 'Auto'];
+const MATCH_TYPE_CONFIG: Array<{
+  value: DomainMatchType;
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: 'host',
+    label: 'Domain (exact host)',
+    hint: 'Matches the host portion of a URL. Example: github.com',
+  },
+  {
+    value: 'wildcard',
+    label: 'Wildcard (*.domain.com/*)',
+    hint: 'Use * to cover multiple subdomains or paths. Example: *.figma.com/files/*',
+  },
+  {
+    value: 'regex',
+    label: 'Regex (advanced)',
+    hint: 'Full JavaScript regular expression against the entire URL.',
+  },
+];
+
+const MATCH_TYPE_LABELS: Record<DomainMatchType, string> = {
+  host: 'Domain',
+  wildcard: 'Wildcard',
+  regex: 'Regex',
+};
 
 const createId = () =>
   typeof globalThis.crypto !== 'undefined' &&
@@ -57,7 +85,8 @@ export default function Rules({ availableBrowsers }: RulesProps) {
   const [addingDomain, setAddingDomain] = useState(false);
   const [addingFileType, setAddingFileType] = useState(false);
   const [domainForm, setDomainForm] = useState({
-    domain: '',
+    pattern: '',
+    matchType: MATCH_TYPE_CONFIG[0].value,
     browser: '',
     policy: POLICY_OPTIONS[0],
     latency: LATENCY_OPTIONS[0],
@@ -138,6 +167,22 @@ export default function Rules({ availableBrowsers }: RulesProps) {
     []
   );
 
+  const matchTypeSelectOptions = useMemo(
+    () =>
+      MATCH_TYPE_CONFIG.map(option => ({
+        value: option.value,
+        label: option.label,
+      })),
+    []
+  );
+
+  const currentMatchHint = useMemo(() => {
+    const config = MATCH_TYPE_CONFIG.find(
+      option => option.value === domainForm.matchType
+    );
+    return config?.hint ?? '';
+  }, [domainForm.matchType]);
+
   const resolveBrowserSelection = (value: string) => {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -161,9 +206,25 @@ export default function Rules({ availableBrowsers }: RulesProps) {
     };
   };
 
+  const resolveMatchType = (value: string): DomainMatchType => {
+    const normalized = normalise(value);
+    if (['wildcard', 'wildcards', 'glob'].includes(normalized)) {
+      return 'wildcard';
+    }
+    if (
+      ['regex', 'regexp', 'regular expression', 'regular-expression'].includes(
+        normalized
+      )
+    ) {
+      return 'regex';
+    }
+    return 'host';
+  };
+
   const resetDomainForm = () =>
     setDomainForm({
-      domain: '',
+      pattern: '',
+      matchType: MATCH_TYPE_CONFIG[0].value,
       browser: '',
       policy: POLICY_OPTIONS[0],
       latency: LATENCY_OPTIONS[0],
@@ -183,20 +244,23 @@ export default function Rules({ availableBrowsers }: RulesProps) {
     event.preventDefault();
     setError(null);
 
-    if (!domainForm.domain.trim() || !domainForm.browser.trim()) {
-      setError('Domain and browser are required to save a rule.');
+    if (!domainForm.pattern.trim() || !domainForm.browser.trim()) {
+      setError('URL pattern and browser are required to save a rule.');
       return;
     }
 
     const selection = resolveBrowserSelection(domainForm.browser);
+    const trimmedPattern = domainForm.pattern.trim();
     const nextRule: DomainRule = {
       id: createId(),
-      domain: domainForm.domain.trim(),
+      pattern: trimmedPattern,
+      matchType: domainForm.matchType,
       browserId: selection.browserId,
       browserLabel: selection.browserLabel,
       policy: domainForm.policy,
       latency: domainForm.latency,
       enabled: domainForm.enabled,
+      domain: trimmedPattern,
     };
 
     const previous = domainRules;
@@ -220,9 +284,93 @@ export default function Rules({ availableBrowsers }: RulesProps) {
 
   const handleTestDomainRule = async (rule: DomainRule) => {
     setError(null);
-    const url = ensureNavigableUrl(rule.domain);
+
+    type SampleResult =
+      | { status: 'ok'; url: string }
+      | { status: 'invalid' }
+      | { status: 'cancelled' }
+      | { status: 'no-prompt' };
+
+    const promptFn =
+      typeof window !== 'undefined' && typeof window.prompt === 'function'
+        ? window.prompt.bind(window)
+        : null;
+
+    const solicitSample = (message: string): SampleResult => {
+      if (!promptFn) {
+        return { status: 'no-prompt' };
+      }
+      const response = promptFn(message, 'https://example.com/');
+      if (response === null) {
+        return { status: 'cancelled' };
+      }
+      const normalized = ensureNavigableUrl(response);
+      if (!normalized) {
+        return { status: 'invalid' };
+      }
+      return { status: 'ok', url: normalized };
+    };
+
+    let url: string | null = null;
+
+    if (rule.matchType === 'host') {
+      url = ensureNavigableUrl(rule.pattern);
+      if (!url) {
+        setError('The pattern must resemble a valid host or URL to test it.');
+        return;
+      }
+    } else if (rule.matchType === 'wildcard') {
+      const candidates = [
+        rule.pattern.replace(/\*/g, 'sample'),
+        rule.pattern.replace(/\*/g, ''),
+        rule.pattern,
+      ];
+      for (const candidate of candidates) {
+        const normalized = ensureNavigableUrl(candidate);
+        if (normalized) {
+          url = normalized;
+          break;
+        }
+      }
+      if (!url) {
+        const sample = solicitSample(
+          'Enter a URL to test against this wildcard rule:'
+        );
+        if (sample.status === 'ok') {
+          url = sample.url;
+        } else if (sample.status === 'invalid') {
+          setError('Provide a valid URL to test this rule.');
+          return;
+        } else if (sample.status === 'no-prompt') {
+          setError(
+            'Provide a sample URL to test wildcard rules when prompts are unavailable.'
+          );
+          return;
+        } else {
+          return;
+        }
+      }
+    } else {
+      const sample = solicitSample(
+        'Enter a URL to test against this regex rule:'
+      );
+      if (sample.status === 'ok') {
+        url = sample.url;
+      } else if (sample.status === 'invalid') {
+        setError('Provide a valid URL to test this rule.');
+        return;
+      } else if (sample.status === 'no-prompt') {
+        setError(
+          'Provide a sample URL to test regex rules when prompts are unavailable.'
+        );
+        return;
+      } else {
+        return;
+      }
+    }
+
     if (!url) {
-      setError('Rule domain must be a valid URL or host to test.');
+      setError('Unable to determine a URL to test this rule.');
       return;
     }
 
@@ -230,8 +378,8 @@ export default function Rules({ availableBrowsers }: RulesProps) {
       await simulateIncomingLink({
         url,
         sourceApp: 'Rules panel',
-        sourceContext: rule.browserLabel,
-        preview: `Testing rule for ${rule.domain}`,
+        sourceContext: `${rule.browserLabel} · ${MATCH_TYPE_LABELS[rule.matchType]}`,
+        preview: `Testing rule for ${rule.pattern}`,
       });
     } catch (err) {
       setError(
@@ -426,15 +574,15 @@ export default function Rules({ availableBrowsers }: RulesProps) {
         const parsed: DomainRule[] = [...domainRules];
 
         lines.forEach(line => {
-          const [
-            domain,
-            browser,
-            policy = 'Always',
-            latency = 'Auto',
-            enabled,
-          ] = line.split(',').map(part => part.trim());
+          const parts = line.split(',').map(part => part.trim());
+          const pattern = parts[0];
+          const browser = parts[1];
+          const policy = parts[2] ?? 'Always';
+          const latency = parts[3] ?? 'Auto';
+          const enabled = parts[4];
+          const matchTypeRaw = parts[5] ?? '';
 
-          if (!domain || !browser) {
+          if (!pattern || !browser) {
             return;
           }
 
@@ -450,15 +598,28 @@ export default function Rules({ availableBrowsers }: RulesProps) {
                   enabled.toLowerCase()
                 )
               : true;
+          const trimmedPattern = pattern.trim();
+          const inferredMatchType =
+            matchTypeRaw && matchTypeRaw.length > 0
+              ? resolveMatchType(matchTypeRaw)
+              : trimmedPattern.startsWith('^') ||
+                  trimmedPattern.endsWith('$') ||
+                  /\\[wds]/.test(trimmedPattern)
+                ? 'regex'
+                : trimmedPattern.includes('*')
+                  ? 'wildcard'
+                  : 'host';
 
           parsed.push({
             id: createId(),
-            domain,
+            pattern: trimmedPattern,
+            matchType: inferredMatchType,
             browserId: selection.browserId,
             browserLabel: selection.browserLabel,
             policy: policyValue ?? POLICY_OPTIONS[0],
             latency: latencyValue,
             enabled: enabledValue,
+            domain: trimmedPattern,
           });
         });
 
@@ -498,7 +659,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
             className='rounded-[18px] border border-emerald-400/50 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70'
             onClick={() => setAddingDomain(true)}
           >
-            Add domain rule
+            Add URL rule
           </button>
         </div>
         {error ? <p className='mt-4 text-sm text-red-300'>{error}</p> : null}
@@ -509,7 +670,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
 
       <section className='panel'>
         <header className='flex flex-wrap items-center justify-between gap-4'>
-          <h3 className='panel-title'>Domain rules</h3>
+          <h3 className='panel-title'>URL rules</h3>
           <button
             className='rounded-[16px] border border-white/5 bg-black/30 px-3 py-2 text-xs font-semibold text-zinc-300 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
             onClick={handleCsvClick}
@@ -521,24 +682,42 @@ export default function Rules({ availableBrowsers }: RulesProps) {
         {addingDomain ? (
           <form
             onSubmit={handleSubmitDomainRule}
-            className='mt-6 grid gap-4 rounded-[20px] border border-white/5 bg-black/25 p-4 sm:grid-cols-2'
+            className='mt-6 grid gap-4 rounded-[20px] border border-white/5 bg-black/25 p-4 md:grid-cols-3'
           >
-            <label className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-1'>
-              Domain
+            <label className='flex flex-col gap-2 text-xs text-zinc-400 md:col-span-3'>
+              URL pattern
               <input
                 type='text'
-                value={domainForm.domain}
+                value={domainForm.pattern}
                 onChange={event =>
                   setDomainForm(form => ({
                     ...form,
-                    domain: event.target.value,
+                    pattern: event.target.value,
                   }))
                 }
                 className='rounded-[14px] border border-white/10 bg-black/40 px-3 py-2 text-sm text-zinc-100 shadow-soft-sm focus:border-emerald-300/60 focus:outline-none'
-                placeholder='example.com'
+                placeholder='https://github.com/* or ^https://.+/docs$'
               />
+              {currentMatchHint ? (
+                <span className='text-[11px] text-zinc-500'>
+                  {currentMatchHint}
+                </span>
+              ) : null}
             </label>
-            <div className='flex flex-col gap-1 text-xs text-zinc-400 sm:col-span-1'>
+            <div className='flex flex-col gap-1 text-xs text-zinc-400'>
+              <span>Match type</span>
+              <Select
+                options={matchTypeSelectOptions}
+                value={domainForm.matchType}
+                onChange={next =>
+                  setDomainForm(form => ({
+                    ...form,
+                    matchType: next as DomainMatchType,
+                  }))
+                }
+              />
+            </div>
+            <div className='flex flex-col gap-1 text-xs text-zinc-400 md:col-span-2'>
               <span>Browser profile</span>
               <Combobox
                 options={comboboxOptions}
@@ -592,7 +771,7 @@ export default function Rules({ availableBrowsers }: RulesProps) {
               />
               Enabled
             </label>
-            <div className='flex gap-3 sm:col-span-2'>
+            <div className='flex gap-3 md:col-span-3'>
               <button
                 type='submit'
                 className='flex-1 rounded-[16px] border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70 disabled:opacity-40'
@@ -614,10 +793,11 @@ export default function Rules({ availableBrowsers }: RulesProps) {
         ) : null}
 
         <div className='mt-6 overflow-x-auto rounded-[20px] border border-white/5 shadow-soft-sm'>
-          <table className='min-w-[720px] w-full divide-y divide-white/5 text-sm text-zinc-300'>
+          <table className='min-w-[760px] w-full divide-y divide-white/5 text-sm text-zinc-300'>
             <thead className='bg-black/20 text-xs uppercase tracking-[0.3em] text-zinc-500'>
               <tr>
-                <th className='px-5 py-3 text-left'>Domain</th>
+                <th className='px-5 py-3 text-left'>URL pattern</th>
+                <th className='px-5 py-3 text-left'>Match type</th>
                 <th className='px-5 py-3 text-left'>Browser profile</th>
                 <th className='px-5 py-3 text-left'>Policy</th>
                 <th className='px-5 py-3 text-left'>Latency budget</th>
@@ -629,10 +809,10 @@ export default function Rules({ availableBrowsers }: RulesProps) {
               {domainRules.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className='px-5 py-6 text-center text-sm text-zinc-500'
                   >
-                    No domain rules yet. Add one to preselect browsers
+                    No URL rules yet. Add one to preselect browsers
                     automatically.
                   </td>
                 </tr>
@@ -645,8 +825,13 @@ export default function Rules({ availableBrowsers }: RulesProps) {
                         className='rounded-[12px] border border-transparent bg-transparent px-2 py-1 text-left text-sm text-emerald-200 transition hover:border-emerald-400/40 hover:bg-emerald-500/10'
                         onClick={() => void handleTestDomainRule(rule)}
                       >
-                        {rule.domain}
+                        {rule.pattern}
                       </button>
+                    </td>
+                    <td className='px-5 py-4'>
+                      <span className='rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-xs text-zinc-400'>
+                        {MATCH_TYPE_LABELS[rule.matchType] ?? 'Domain'}
+                      </span>
                     </td>
                     <td className='px-5 py-4'>{rule.browserLabel}</td>
                     <td className='px-5 py-4'>

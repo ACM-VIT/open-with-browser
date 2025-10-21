@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Rules from './pages/Rules';
@@ -21,12 +21,14 @@ import {
   setUiSetting,
 } from './lib/storage';
 import { useUIStore } from './store/uiStore';
+import Onboarding from './components/Onboarding';
 import {
   isTauriEnvironment,
   loadAutostartState,
   setAutostartState,
 } from './lib/autostart';
 import { useAppStore } from './store/appStore';
+import type { PageKey } from './store/appStore';
 
 export default function App() {
   const currentPage = useAppStore(state => state.currentPage);
@@ -72,6 +74,7 @@ export default function App() {
     state => state.setPendingFallbackFocus
   );
   const hasFallbackRef = useRef<boolean | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const setDialogSelectedBrowser = useUIStore(
     state => state.setSelectedBrowser
@@ -124,6 +127,11 @@ export default function App() {
     setSettingsReady,
     setUiSettings,
   ]);
+
+  useEffect(() => {
+    if (!settingsReady) return;
+    setOnboardingOpen(!uiSettings.onboardingCompleted);
+  }, [settingsReady, uiSettings.onboardingCompleted]);
 
   useEffect(() => {
     if (!isTauriEnvironment()) {
@@ -420,6 +428,40 @@ export default function App() {
     setUiSettings,
   ]);
 
+  const finalizeOnboarding = useCallback(
+    async (navigateTo?: PageKey) => {
+      setOnboardingOpen(false);
+      setUiSettings(prev => ({
+        ...prev,
+        onboardingCompleted: true,
+      }));
+      try {
+        await setUiSetting('onboardingCompleted', true);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('Unable to persist onboarding completion', err);
+      }
+      if (navigateTo) {
+        setCurrentPage(navigateTo);
+      }
+    },
+    [setCurrentPage, setUiSettings]
+  );
+
+  const handleOnboardingClose = useCallback(() => {
+    void finalizeOnboarding();
+  }, [finalizeOnboarding]);
+
+  const handleOnboardingComplete = useCallback(
+    (options?: { navigateToRules?: boolean }) => {
+      const navigateTo: PageKey | undefined = options?.navigateToRules
+        ? 'rules'
+        : undefined;
+      void finalizeOnboarding(navigateTo);
+    },
+    [finalizeOnboarding]
+  );
+
   const recentHistory = useMemo(() => history.slice(0, 5), [history]);
 
   const handleRememberChoiceChange = useCallback(
@@ -640,19 +682,28 @@ export default function App() {
       onNavigate={setCurrentPage}
       activeLink={activeLink}
     >
-      {ready ? (
-        initError ? (
-          <div className='flex h-full items-center justify-center text-sm text-red-300'>
-            {initError}
-          </div>
+      <>
+        {ready ? (
+          initError ? (
+            <div className='flex h-full items-center justify-center text-sm text-red-300'>
+              {initError}
+            </div>
+          ) : (
+            renderPage()
+          )
         ) : (
-          renderPage()
-        )
-      ) : (
-        <div className='flex h-full items-center justify-center text-sm text-zinc-500'>
-          Initializing routing service…
-        </div>
-      )}
+          <div className='flex h-full items-center justify-center text-sm text-zinc-500'>
+            Initializing routing service…
+          </div>
+        )}
+        <Onboarding
+          open={onboardingOpen}
+          browsers={browserCatalog}
+          onClose={handleOnboardingClose}
+          onComplete={handleOnboardingComplete}
+          onFallbackSaved={() => handleFallbackChanged(true)}
+        />
+      </>
     </Layout>
   );
 }
