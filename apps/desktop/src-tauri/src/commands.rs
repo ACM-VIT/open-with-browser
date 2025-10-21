@@ -38,13 +38,11 @@ fn current_http_handler_windows() -> Result<String, String> {
 #[cfg(target_os = "macos")]
 fn current_http_handler_macos() -> Result<String, String> {
     use core_foundation::base::TCFType;
-    use core_foundation::string::CFString;
+    use core_foundation::string::{CFString, CFStringRef};
 
     #[link(name = "CoreServices", kind = "framework")]
     extern "C" {
-        fn LSCopyDefaultHandlerForURLScheme(
-            scheme: core_foundation::sys::string::CFStringRef,
-        ) -> core_foundation::sys::string::CFStringRef;
+        fn LSCopyDefaultHandlerForURLScheme(scheme: CFStringRef) -> CFStringRef;
     }
 
     let scheme = CFString::new("http");

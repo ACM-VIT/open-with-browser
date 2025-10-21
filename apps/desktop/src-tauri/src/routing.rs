@@ -2,7 +2,6 @@ use crate::preferences::PreferencesState;
 use chrono::Utc;
 use crowser::browser::{get_all_existing_browsers, get_browser_path};
 use serde::{Deserialize, Serialize};
-use std::env;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::Arc;
@@ -12,8 +11,10 @@ use tokio::time::{sleep, Duration};
 use url::Url;
 use uuid::Uuid;
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-use dirs::{config_dir, home_dir};
+#[cfg(target_os = "linux")]
+use dirs::config_dir;
+#[cfg(target_os = "macos")]
+use dirs::home_dir;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
