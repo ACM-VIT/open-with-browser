@@ -1,18 +1,24 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { type UIState, useUIStore } from './store/uiStore';
 
 export type BrowserProfile = {
   id: string;
   name: string;
   icon?: string;
-  profile?: string | null;
+  profileLabel?: string | null;
+  profileDirectory?: string | null;
 };
 
 type Props = {
   open?: boolean;
   onClose?: () => void;
   browsers: BrowserProfile[];
-  onChoose: (browser: BrowserProfile, persist: 'just-once' | 'always') => void;
+  onChoose: (
+    browser: BrowserProfile,
+    persist: 'just-once' | 'always'
+  ) => Promise<void> | void;
+  disabled?: boolean;
+  showIcons?: boolean;
 };
 
 export default function OpenWithDialog({
@@ -20,6 +26,8 @@ export default function OpenWithDialog({
   onClose: onCloseProp,
   browsers,
   onChoose,
+  disabled = false,
+  showIcons = true,
 }: Props) {
   const storeOpen = useUIStore((s: UIState) => s.isDialogOpen);
   const storeSelected = useUIStore((s: UIState) => s.selectedBrowserId);
@@ -29,49 +37,73 @@ export default function OpenWithDialog({
   const open = openProp ?? storeOpen;
 
   const [localSelected, setLocalSelected] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const defaultSelection = storeSelected ?? browsers[0]?.id ?? null;
   const selected = localSelected ?? defaultSelection;
 
-  if (!open) return null;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setLocalSelected(null);
     if (onCloseProp) onCloseProp();
     else closeDialog();
-  };
+  }, [closeDialog, onCloseProp]);
 
-  const handleChoose = (persist: 'just-once' | 'always') => {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, handleClose]);
+
+  if (!open) return null;
+
+  const handleChoose = async (persist: 'just-once' | 'always') => {
     const browser = browsers.find(b => b.id === selected);
     if (browser) {
-      setSelectedBrowser(browser.id);
-      onChoose(browser, persist);
-      setLocalSelected(null);
+      setSubmitting(true);
+      try {
+        await onChoose(browser, persist);
+        setSelectedBrowser(browser.id);
+        setLocalSelected(null);
+        setSubmitting(false);
+      } catch (error) {
+        setSubmitting(false);
+        throw error;
+      }
     }
   };
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur'>
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur p-4 sm:p-6'>
       <div
         role='dialog'
         aria-modal='true'
-        className='relative w-[min(420px,calc(100vw-3rem))] rounded-[28px] border border-white/5 bg-zinc-950/90 p-6 shadow-soft'
+        className='relative flex w-full max-w-md flex-col rounded-[28px] border border-white/5 bg-zinc-950/90 shadow-soft max-h-[min(85vh,640px)]'
       >
         <button
           aria-label='Close'
-          className='absolute right-3 top-3 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
+          className='absolute right-4 top-4 rounded-full border border-white/10 bg-black/30 px-3 py-1 text-sm text-zinc-400 transition hover:border-red-400/40 hover:text-red-200'
           onClick={handleClose}
         >
           Esc
         </button>
 
-        <header>
+        <header className='px-6 pt-6'>
           <h2 className='text-lg font-semibold text-zinc-100'>Open with</h2>
           <p className='mt-1 text-sm text-zinc-400'>
             Choose the browser profile that should receive this launch request.
           </p>
         </header>
 
-        <div className='mt-6 space-y-3'>
+        <div className='mt-6 flex-1 space-y-3 overflow-y-auto px-6 pb-4 pr-4 sm:pr-6 min-h-0'>
           {browsers.map(browser => {
             const isSelected = selected === browser.id;
             const fallbackGlyph = browser.name.slice(0, 1).toUpperCase();
@@ -92,21 +124,25 @@ export default function OpenWithDialog({
                   onChange={() => setLocalSelected(browser.id)}
                   className='sr-only'
                 />
-                <div className='flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/10 bg-black/40 text-base font-semibold text-zinc-200'>
-                  {browser.icon ? (
-                    <img
-                      src={browser.icon}
-                      alt=''
-                      className='h-8 w-8 rounded-[12px] object-contain'
-                    />
-                  ) : (
-                    fallbackGlyph
-                  )}
-                </div>
-                <div className='flex flex-1 flex-col'>
+                {showIcons ? (
+                  <div className='flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/10 bg-black/40 text-base font-semibold text-zinc-200'>
+                    {browser.icon ? (
+                      <img
+                        src={browser.icon}
+                        alt=''
+                        className='h-8 w-8 rounded-[12px] object-contain'
+                      />
+                    ) : (
+                      fallbackGlyph
+                    )}
+                  </div>
+                ) : null}
+                <div
+                  className={`flex flex-1 flex-col ${showIcons ? '' : 'pl-1'}`}
+                >
                   <span className='text-sm font-semibold'>{browser.name}</span>
                   <span className='text-xs text-zinc-500'>
-                    {browser.profile ?? 'Default profile'}
+                    {browser.profileLabel ?? 'Default profile'}
                   </span>
                 </div>
                 <span
@@ -121,18 +157,20 @@ export default function OpenWithDialog({
           })}
         </div>
 
-        <div className='mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+        <div className='flex flex-col gap-3 border-t border-white/5 px-6 py-6 md:flex-row md:items-center md:justify-between'>
           <button
             onClick={() => handleChoose('just-once')}
-            className='flex-1 rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-200 shadow-soft-sm transition hover:border-amber-400/40 hover:text-amber-200'
+            disabled={disabled || submitting}
+            className='flex-1 rounded-[18px] border border-white/10 bg-black/30 px-4 py-2 text-sm font-semibold text-zinc-200 shadow-soft-sm transition enabled:hover:border-amber-400/40 enabled:hover:text-amber-200 disabled:opacity-40'
           >
-            Just once
+            {submitting ? 'Applying…' : 'Just once'}
           </button>
           <button
             onClick={() => handleChoose('always')}
-            className='flex-1 rounded-[18px] border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition hover:border-emerald-300/70'
+            disabled={disabled || submitting}
+            className='flex-1 rounded-[18px] border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-soft-sm transition enabled:hover:border-emerald-300/70 disabled:opacity-40'
           >
-            Always use this
+            {submitting ? 'Saving…' : 'Always use this'}
           </button>
         </div>
       </div>

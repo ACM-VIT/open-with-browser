@@ -4,10 +4,6 @@ A Tauri application that allows you to open URLs with specific browsers and prof
 
 ## Features
 
-- Browser discovery and management
-- Profile detection for multiple browsers
-- Cross-platform support (Windows, macOS, Linux)
-- Built with Rust and Tauri
 
 ## Documentation
 
@@ -36,7 +32,7 @@ npm run tauri dev
 npm run tauri build
 ```
 
-## Development
+
 
 This project uses:
 - **Tauri** - Desktop app framework
