@@ -57,6 +57,11 @@ export default function OpenWithDialog({
       }
     };
 
+    const first = document.querySelector<HTMLInputElement>(
+      'input[name="owd-browser"]'
+    );
+    first?.focus();
+
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -86,6 +91,7 @@ export default function OpenWithDialog({
       <div
         role='dialog'
         aria-modal='true'
+        aria-labelledby='owd-title'
         className='relative flex w-full max-w-md flex-col rounded-[28px] border border-white/5 bg-zinc-950/90 shadow-soft max-h-[min(85vh,640px)]'
       >
         <button
@@ -97,7 +103,9 @@ export default function OpenWithDialog({
         </button>
 
         <header className='px-6 pt-6'>
-          <h2 className='text-lg font-semibold text-zinc-100'>Open with</h2>
+          <h2 id='owd-title' className='text-lg font-semibold text-zinc-100'>
+            Open with
+          </h2>
           <p className='mt-1 text-sm text-zinc-400'>
             Choose the browser profile that should receive this launch request.
           </p>
