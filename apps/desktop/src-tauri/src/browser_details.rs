@@ -164,7 +164,7 @@ pub fn get_chrome_profiles(
         Browsers::Brave => [
             "BraveSoftware\\Brave-Browser\\User Data\\Local State",
             "BraveSoftware/Brave-Browser/Local State",
-            "brave/Local State",
+            "BraveSoftware/Brave-Browser/Local State",
         ],
         _ => return Ok(Vec::new()),
     };
