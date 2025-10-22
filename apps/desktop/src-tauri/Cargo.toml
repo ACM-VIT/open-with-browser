@@ -34,7 +34,6 @@ url = "2"
 percent-encoding = "2"
 tauri-plugin-os = "2.3.1"
 tauri-plugin-store = "2.4.0"
-env = "1.0.1"
 
 [dev-dependencies]
 tempfile = "3.13.0"

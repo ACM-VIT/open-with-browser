@@ -462,7 +462,7 @@ fn browser_user_data_dir(browser_name: &str) -> Option<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
-        let base = env::var_os("LOCALAPPDATA")?;
+        let base = std::env::var_os("LOCALAPPDATA")?;
         let mut path = PathBuf::from(base);
         match key.as_str() {
             "chrome" => {
