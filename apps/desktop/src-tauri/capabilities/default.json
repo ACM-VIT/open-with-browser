@@ -5,6 +5,14 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default"
+    "core:tray:default",
+    "core:tray:allow-new",
+    "core:tray:allow-set-icon",
+    "core:tray:allow-set-tooltip",
+    "core:tray:allow-set-menu",
+    "opener:default",
+    "os:default",
+    "store:default",
+    "autostart:default"
   ]
 }
