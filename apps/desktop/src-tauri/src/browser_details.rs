@@ -173,6 +173,9 @@ pub fn get_chrome_profiles(
 }
 
 pub fn get_firefox_profiles() -> Result<Vec<ProfileDescriptor>, Box<dyn std::error::Error>> {
+    use std::path::PathBuf;
+    use ini::Ini;
+
     let os_type = tauri_plugin_os::type_();
     let base_dir = match os_type {
         OsType::Windows | OsType::Macos => data_local_dir(),
@@ -180,16 +183,60 @@ pub fn get_firefox_profiles() -> Result<Vec<ProfileDescriptor>, Box<dyn std::err
         _ => None,
     };
 
-    if let Some(mut path) = base_dir {
+    if let Some(mut base_path) = base_dir {
         match os_type {
-            OsType::Windows => path.push("Mozilla\\Firefox\\Profiles"),
-            OsType::Macos => path.push("Firefox/Profiles"),
-            OsType::Linux => path.push(".mozilla/firefox"),
+            OsType::Windows => base_path.push("Mozilla\\Firefox"),
+            OsType::Macos => base_path.push("Firefox"),
+            OsType::Linux => base_path.push(".mozilla/firefox"),
             _ => return Ok(Vec::new()),
         }
 
-        if path.exists() {
-            match fs::read_dir(path) {
+        let ini_path = base_path.join("profiles.ini");
+
+        if ini_path.exists() {
+            let conf = Ini::load_from_file(&ini_path)?;
+            let mut profiles: Vec<ProfileDescriptor> = Vec::new();
+
+            for (section_name, properties) in &conf {
+                if let Some(section) = section_name {
+                    if section.starts_with("Profile") {
+                        let name = properties.get("Name").map(|s| s.to_string());
+                        let path_str = properties.get("Path").map(|s| s.to_string());
+                        let is_relative = properties
+                            .get("IsRelative")
+                            .map(|s| s == "1")
+                            .unwrap_or(true);
+
+                        if let Some(p) = path_str {
+                            let path = if is_relative {
+                                base_path.join(&p)
+                            } else {
+                                PathBuf::from(&p)
+                            };
+
+                            let display_name = name.unwrap_or_else(|| {
+                                path.file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy()
+                                    .to_string()
+                            });
+
+                            profiles.push(ProfileDescriptor {
+                                display_name,
+                                directory: path.to_string_lossy().to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+
+            profiles.sort_by(|a, b| a.display_name.cmp(&b.display_name));
+            return Ok(profiles);
+        }
+
+        let profiles_path = base_path.join("Profiles");
+        if profiles_path.exists() {
+            match fs::read_dir(profiles_path) {
                 Ok(entries) => {
                     let mut profiles: Vec<ProfileDescriptor> = entries
                         .filter_map(Result::ok)
@@ -204,6 +251,7 @@ pub fn get_firefox_profiles() -> Result<Vec<ProfileDescriptor>, Box<dyn std::err
                             _ => None,
                         })
                         .collect();
+
                     profiles.sort_by(|a, b| a.display_name.cmp(&b.display_name));
                     return Ok(profiles);
                 }
@@ -215,5 +263,6 @@ pub fn get_firefox_profiles() -> Result<Vec<ProfileDescriptor>, Box<dyn std::err
         }
     }
 
-    return Ok(Vec::new());
+    Ok(Vec::new())
 }
+
